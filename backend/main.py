@@ -1,8 +1,17 @@
 from fastapi import FastAPI
+from backend.database import engine
+from sqlalchemy import text
+from contextlib import asynccontextmanager
 
-app = FastAPI()
 
-@app.get("/")
-def health_check():
-    return {"status": "ok"}
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    try:
+        with engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
+            print("Database connection verified on startup")
+    except Exception as e:
+        print(f"Error connecting to the database on startup: {e}")
+    yield
 
+app = FastAPI(lifespan=lifespan)
