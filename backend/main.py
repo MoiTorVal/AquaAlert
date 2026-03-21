@@ -1,11 +1,13 @@
 from fastapi import FastAPI
-from backend.database import engine
+from backend.database import engine, Base
+from backend import models
 from sqlalchemy import text
 from contextlib import asynccontextmanager
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    Base.metadata.create_all(bind=engine)
     try:
         with engine.connect() as connection:
             connection.execute(text("SELECT 1"))
