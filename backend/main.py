@@ -3,6 +3,7 @@ from backend.database import engine, Base
 from backend import models
 from sqlalchemy import text
 from contextlib import asynccontextmanager
+from backend.routers import farms
 
 
 @asynccontextmanager
@@ -17,3 +18,4 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(lifespan=lifespan)
+app.include_router(farms.router, prefix="/farms", tags=["farms"])
