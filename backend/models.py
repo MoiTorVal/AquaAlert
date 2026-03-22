@@ -21,6 +21,7 @@ class WeatherReading(Base):
     recorded_at = Column(DateTime, nullable=False)
     location = Column(String(255))
     temperature_c = Column(Numeric(5, 2))
+    description = Column(String(255))
     humidity_pct = Column(Numeric(5, 2))
     rainfall_mm = Column(Numeric(8, 2))
     wind_speed_kph = Column(Numeric(6, 2))

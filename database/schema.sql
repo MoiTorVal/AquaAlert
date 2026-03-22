@@ -1,4 +1,4 @@
-CREATE TABLE agronomists (
+CREATE TABLE IF NOT EXISTS agronomists (
     id          INT AUTO_INCREMENT PRIMARY KEY,
     name        VARCHAR(100) NOT NULL,
     email       VARCHAR(150) UNIQUE NOT NULL,
@@ -6,7 +6,7 @@ CREATE TABLE agronomists (
     created_at  TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE farms (
+CREATE TABLE IF NOT EXISTS farms (
     id              INT AUTO_INCREMENT PRIMARY KEY,
     agronomist_id   INT NOT NULL,
     name            VARCHAR(100) NOT NULL,
@@ -17,18 +17,19 @@ CREATE TABLE farms (
     FOREIGN KEY (agronomist_id) REFERENCES agronomists(id) ON DELETE CASCADE
 );
 
-CREATE TABLE weather_readings (
+CREATE TABLE IF NOT EXISTS weather_readings (
     id              INT AUTO_INCREMENT PRIMARY KEY,
     recorded_at     TIMESTAMP NOT NULL,
     location        VARCHAR(255),
     temperature_c   NUMERIC(5, 2),
+    description     VARCHAR(255),
     humidity_pct    NUMERIC(5, 2),
     rainfall_mm     NUMERIC(8, 2),
     wind_speed_kph  NUMERIC(6, 2),
     et0_mm          NUMERIC(8, 2)   -- reference evapotranspiration
 );
 
-CREATE TABLE irrigation_recommendations (
+CREATE TABLE IF NOT EXISTS irrigation_recommendations (
     id              INT AUTO_INCREMENT PRIMARY KEY,
     farm_id         INT NOT NULL,
     weather_id      INT,

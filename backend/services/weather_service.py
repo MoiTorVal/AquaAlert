@@ -1,7 +1,11 @@
 from dotenv import load_dotenv
 from datetime import datetime
+from backend.database import SessionLocal
+from backend.crud import create_weather_reading
+from backend.schemas import WeatherReadingCreate
 import requests
 import os
+
 
 
 load_dotenv()
@@ -44,3 +48,20 @@ def parse_weather_data(data):
     except (KeyError, TypeError) as e:
         print(f"Error parsing weather data: {e}")
         return None
+
+def fetch_and_save_weather_data(location):
+    db = SessionLocal()
+    try:
+        weather_data = get_weather_data(location)
+        parsed_data = parse_weather_data(weather_data)
+        if parsed_data:
+            result = create_weather_reading(db, WeatherReadingCreate(**parsed_data))
+            return result
+        return None
+    finally:
+        db.close()
+
+
+if __name__ == "__main__":
+    result = fetch_and_save_weather_data("Fresno")
+    print(result)
