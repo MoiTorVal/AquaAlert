@@ -2,7 +2,7 @@ from backend import models
 from backend.schemas import FarmCreate, WeatherReadingCreate, WeatherReadingCreate, WeatherReadingResponse
 from sqlalchemy.orm import Session
 
-
+# CRUD operations for farms
 def create_farm(db: Session, farm: FarmCreate):
     db_farm = models.Farm(**farm.model_dump())
     db.add(db_farm)
