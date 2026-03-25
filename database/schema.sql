@@ -14,11 +14,25 @@ CREATE TABLE IF NOT EXISTS farms (
     area_hectares   NUMERIC(10, 2),
     crop_type       VARCHAR(100),
     created_at      TIMESTAMP DEFAULT NOW(),
+    soil_type       VARCHAR(100),
+    field_capacity_pct NUMERIC(5, 2),
+    wilting_point_pct NUMERIC(5, 2),
+    growth_stage    VARCHAR(50),
     FOREIGN KEY (agronomist_id) REFERENCES agronomists(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS soil_readings (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    farm_id INT NOT NULL,
+    recorded_at TIMESTAMP NOT NULL,
+    moisture_pct NUMERIC(5, 2),
+    FOREIGN KEY (farm_id) REFERENCES farms(id) ON DELETE CASCADE
+
 );
 
 CREATE TABLE IF NOT EXISTS weather_readings (
     id              INT AUTO_INCREMENT PRIMARY KEY,
+    farm_id         INT NOT NULL,
     recorded_at     TIMESTAMP NOT NULL,
     location        VARCHAR(255),
     temperature_c   NUMERIC(5, 2),
@@ -26,7 +40,8 @@ CREATE TABLE IF NOT EXISTS weather_readings (
     humidity_pct    NUMERIC(5, 2),
     rainfall_mm     NUMERIC(8, 2),
     wind_speed_kph  NUMERIC(6, 2),
-    et0_mm          NUMERIC(8, 2)   -- reference evapotranspiration
+    et0_mm          NUMERIC(8, 2),  -- reference evapotranspiration
+    FOREIGN KEY (farm_id) REFERENCES farms(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS irrigation_recommendations (
