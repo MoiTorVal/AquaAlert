@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, date
 
 
 class FarmBase(BaseModel):
@@ -8,8 +8,15 @@ class FarmBase(BaseModel):
     location: Optional[str] = None
     area_hectares: Optional[float] = None
     crop_type: Optional[str] = None
+    soil_type: Optional[str] = None
+    root_depth_cm: Optional[float] = None
+    growth_stage: Optional[str] = None
+    planting_date: Optional[date] = None
+    field_capacity_pct: Optional[float] = None
+    wilting_point_pct: Optional[float] = None
 
-
+class FarmUpdate(FarmBase):
+    pass
 class FarmCreate(FarmBase):
     agronomist_id: int
 
@@ -22,6 +29,17 @@ class FarmResponse(FarmBase):
         from_attributes = True
 
 class WeatherReadingCreate(BaseModel):
+    farm_id: int
+    recorded_at: datetime
+    location: str
+    temperature_c: float
+    humidity_pct: float
+    description: str
+    rainfall_mm: float
+    wind_speed_kph: float
+    et0_mm: Optional[float] = None
+
+class WeatherReadingBody(BaseModel):
     recorded_at: datetime
     location: str
     temperature_c: float
@@ -35,3 +53,30 @@ class WeatherReadingResponse(WeatherReadingCreate):
     id: int
     class Config:
         from_attributes = True
+
+class PaginatedWeatherResponse(BaseModel):
+    total: int
+    skip: int
+    limit: int
+    results: list[WeatherReadingResponse]
+
+class SoilMoistureReadingCreate(BaseModel):
+    farm_id: int
+    recorded_at: datetime
+    soil_moisture_pct: float
+
+class SoilMoistureReadingBody(BaseModel):
+    recorded_at: datetime
+    soil_moisture_pct: float
+
+
+class SoilMoistureReadingResponse(SoilMoistureReadingCreate):
+    id: int
+    class Config:
+        from_attributes = True
+
+class PaginatedSoilMoistureResponse(BaseModel):
+    total: int
+    skip: int
+    limit: int
+    results: list[SoilMoistureReadingResponse]

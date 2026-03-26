@@ -49,12 +49,13 @@ def parse_weather_data(data):
         print(f"Error parsing weather data: {e}")
         return None
 
-def fetch_and_save_weather_data(location):
+def fetch_and_save_weather_data(location, farm_id):
     db = SessionLocal()
     try:
         weather_data = get_weather_data(location)
         parsed_data = parse_weather_data(weather_data)
         if parsed_data:
+            parsed_data["farm_id"] = farm_id
             result = create_weather_reading(db, WeatherReadingCreate(**parsed_data))
             return result
         return None
@@ -63,5 +64,5 @@ def fetch_and_save_weather_data(location):
 
 
 if __name__ == "__main__":
-    result = fetch_and_save_weather_data("Fresno")
+    result = fetch_and_save_weather_data("Fresno", 1)
     print(result)

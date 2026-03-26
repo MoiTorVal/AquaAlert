@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Numeric, DateTime
 from sqlalchemy import ForeignKey
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
 from backend.database import Base
 
 default=lambda: datetime.now(timezone.utc)
@@ -18,6 +18,7 @@ class WeatherReading(Base):
     __tablename__ = "weather_readings"
 
     id = Column(Integer, primary_key=True, index=True)
+    farm_id = Column(Integer, ForeignKey("farms.id"), nullable=False)
     recorded_at = Column(DateTime, nullable=False)
     location = Column(String(255))
     temperature_c = Column(Numeric(5, 2))
@@ -38,6 +39,20 @@ class Farm(Base):
     agronomist_id = Column(Integer, ForeignKey("agronomists.id"), nullable=False)
     area_hectares = Column(Numeric(10, 2))
     crop_type = Column(String(100))
+    soil_type = Column(String(100))
+    root_depth_cm = Column(Numeric(5, 2))
+    growth_stage = Column(String(50))
+    planting_date = Column(date)
+    field_capacity_pct = Column(Numeric(5, 2))
+    wilting_point_pct = Column(Numeric(5, 2))
+
+class SoilMoistureReading(Base):
+    __tablename__ = "soil_moisture_readings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    farm_id = Column(Integer, ForeignKey("farms.id"), nullable=False)
+    recorded_at = Column(DateTime, nullable=False)
+    soil_moisture_pct = Column(Numeric(5, 2))
 
 class IrrigationRecommendation(Base):
     __tablename__ = "irrigation_recommendations"
