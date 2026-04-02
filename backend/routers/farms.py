@@ -3,12 +3,14 @@ from sqlalchemy.orm import Session
 from backend.database import SessionLocal
 from backend import crud
 from backend.schemas import (
-    FarmCreate, FarmUpdate, FarmResponse,
+    FarmCreate, FarmUpdate, FarmResponse, WaterStressResponse,
     WeatherReadingBody, WeatherReadingCreate, WeatherReadingResponse, PaginatedWeatherResponse,
-    SoilMoistureReadingBody, SoilMoistureReadingCreate, SoilMoistureReadingResponse, PaginatedSoilMoistureResponse,
+    SoilMoistureReadingBody, SoilMoistureReadingCreate, SoilMoistureReadingResponse, PaginatedSoilMoistureResponse, WaterStressResponse
 )
+from backend.services.water_balance import compute_water_balance
 from typing import List
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
+
 
 def get_db():
     db = SessionLocal()
@@ -103,3 +105,28 @@ def create_soil_moisture_reading(farm_id: int, body: SoilMoistureReadingBody, db
         raise HTTPException(status_code=404, detail="Farm not found")
     soil_moisture_reading = SoilMoistureReadingCreate(farm_id=farm_id, **body.model_dump())
     return crud.create_soil_moisture_reading(db=db, soil_moisture_reading=soil_moisture_reading)
+
+
+@router.get("/{farm_id}/water-stress", response_model=WaterStressResponse)
+def get_water_stress(
+    farm_id: int,
+    et0_forecast_mm_per_day: float | None = None,
+    db: Session = Depends(get_db)
+):
+    db_farm = crud.get_farm(db=db, farm_id=farm_id)
+    if db_farm is None:
+        raise HTTPException(status_code=404, detail="Farm not found")
+    
+    start_date = datetime.now(timezone.utc) - timedelta(days=7)        
+    end_date = datetime.now(timezone.utc)
+
+    weather_readings = crud.get_weather_readings_by_farm(db=db, farm_id=farm_id, skip=0, limit=1000, start_date=start_date, end_date=end_date)
+    soil_moisture_reading = crud.get_latest_soil_moisture_reading(db=db, farm_id=farm_id)
+
+    water_stress = compute_water_balance(
+        farm=db_farm,
+        weather_reading=weather_readings,
+        soil_moisture_reading=soil_moisture_reading,
+        et0_forecast_mm_per_day=et0_forecast_mm_per_day,
+    )
+    return water_stress

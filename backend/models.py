@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Numeric, DateTime, Date
+from sqlalchemy import Column, Integer, String, Numeric, DateTime, Date, UniqueConstraint
 from sqlalchemy import ForeignKey
 from datetime import datetime, timezone
 from backend.database import Base
@@ -27,6 +27,7 @@ class WeatherReading(Base):
     rainfall_mm = Column(Numeric(8, 2))
     wind_speed_kph = Column(Numeric(6, 2))
     et0_mm = Column(Numeric(8, 2))
+    __table_args__ = (UniqueConstraint('farm_id', 'recorded_at', name='uq_weather_farm_recorded'),)
 
 
 class Farm(Base):

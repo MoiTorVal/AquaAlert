@@ -80,3 +80,11 @@ class PaginatedSoilMoistureResponse(BaseModel):
     skip: int
     limit: int
     results: list[SoilMoistureReadingResponse]
+
+class WaterStressResponse(BaseModel):
+    current_depletion_mm: float
+    paw_mm: float
+    raw_threshold_mm: float
+    stress_in_days: Optional[int]                                                           
+    warning: bool
+    severity: str

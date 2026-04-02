@@ -113,3 +113,6 @@ def count_soil_moisture_readings_by_farm(
     if end_date:
         query = query.filter(models.SoilMoistureReading.recorded_at <= end_date)
     return query.count()
+
+def get_latest_soil_moisture_reading(db: Session, farm_id: int):
+    return db.query(models.SoilMoistureReading).filter(models.SoilMoistureReading.farm_id == farm_id).order_by(models.SoilMoistureReading.recorded_at.desc()).first()
