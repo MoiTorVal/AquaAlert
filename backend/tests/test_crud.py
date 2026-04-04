@@ -186,3 +186,89 @@ def test_get_latest_soil_moisture_reading(db, farm):
     crud.create_soil_moisture_reading(db, make_soil(farm.id, moisture_pct=28.0, offset_days=1))
     result = crud.get_latest_soil_moisture_reading(db, farm.id)
     assert float(result.soil_moisture_pct) == 28.0  # most recent
+
+
+# ── additional coverage ──────────────────────────────────────────────────────
+
+
+def test_get_weather_reading_by_id(db, farm):
+    created = crud.create_weather_reading(db, make_weather(farm.id))
+    result = crud.get_weather_reading(db, created.id)
+    assert result is not None
+    assert result.id == created.id
+
+
+def test_get_weather_reading_not_found(db):
+    result = crud.get_weather_reading(db, 9999)
+    assert result is None
+
+
+def test_get_soil_moisture_reading_by_id(db, farm):
+    created = crud.create_soil_moisture_reading(db, make_soil(farm.id))
+    result = crud.get_soil_moisture_reading(db, farm_id=farm.id, reading_id=created.id)
+    assert result is not None
+    assert result.id == created.id
+
+
+def test_get_soil_moisture_reading_wrong_farm_returns_none(db, farm):
+    created = crud.create_soil_moisture_reading(db, make_soil(farm.id))
+    result = crud.get_soil_moisture_reading(db, farm_id=9999, reading_id=created.id)
+    assert result is None
+
+
+def test_count_weather_readings_by_farm(db, farm):
+    crud.create_weather_reading(db, make_weather(farm.id, offset_days=0))
+    crud.create_weather_reading(db, make_weather(farm.id, offset_days=1))
+    count = crud.count_weather_readings_by_farm(db, farm.id)
+    assert count == 2
+
+
+def test_count_weather_readings_date_filter(db, farm):
+    crud.create_weather_reading(db, make_weather(farm.id, offset_days=0))   # June 1
+    crud.create_weather_reading(db, make_weather(farm.id, offset_days=5))   # June 6
+    crud.create_weather_reading(db, make_weather(farm.id, offset_days=10))  # June 11
+    count = crud.count_weather_readings_by_farm(
+        db, farm.id,
+        start_date=datetime(2026, 6, 4, tzinfo=timezone.utc),
+        end_date=datetime(2026, 6, 8, tzinfo=timezone.utc),
+    )
+    assert count == 1  # only June 6
+
+
+def test_count_soil_moisture_readings_by_farm(db, farm):
+    crud.create_soil_moisture_reading(db, make_soil(farm.id, offset_days=0))
+    crud.create_soil_moisture_reading(db, make_soil(farm.id, offset_days=1))
+    count = crud.count_soil_moisture_readings_by_farm(db, farm.id)
+    assert count == 2
+
+
+def test_count_soil_moisture_readings_date_filter(db, farm):
+    crud.create_soil_moisture_reading(db, make_soil(farm.id, offset_days=0))   # June 1
+    crud.create_soil_moisture_reading(db, make_soil(farm.id, offset_days=5))   # June 6
+    crud.create_soil_moisture_reading(db, make_soil(farm.id, offset_days=10))  # June 11
+    count = crud.count_soil_moisture_readings_by_farm(
+        db, farm.id,
+        start_date=datetime(2026, 6, 4, tzinfo=timezone.utc),
+        end_date=datetime(2026, 6, 8, tzinfo=timezone.utc),
+    )
+    assert count == 1  # only June 6
+
+
+def test_soil_moisture_date_filter(db, farm):
+    crud.create_soil_moisture_reading(db, make_soil(farm.id, offset_days=0))   # June 1
+    crud.create_soil_moisture_reading(db, make_soil(farm.id, offset_days=5))   # June 6
+    crud.create_soil_moisture_reading(db, make_soil(farm.id, offset_days=10))  # June 11
+    results = crud.get_soil_moisture_readings_by_farm(
+        db,
+        farm.id,
+        start_date=datetime(2026, 6, 4, tzinfo=timezone.utc),
+        end_date=datetime(2026, 6, 8, tzinfo=timezone.utc),
+    )
+    assert len(results) == 1  # only June 6
+
+
+def test_get_farms_pagination(db, agronomist):
+    for i in range(5):
+        crud.create_farm(db, FarmCreate(name=f"Farm {i}", agronomist_id=agronomist.id))
+    results = crud.get_farms(db, agronomist_id=agronomist.id, skip=2, limit=2)
+    assert len(results) == 2

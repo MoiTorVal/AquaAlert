@@ -198,3 +198,34 @@ def test_water_stress_unknown_farm(client):
     assert response.status_code == 404
 
 
+# ── additional route coverage ─────────────────────────────────────────────────
+
+
+def test_get_soil_moisture_readings_unknown_farm_route(client):
+    response = client.get("/farms/9999/soil-moisture")
+    assert response.status_code == 404
+
+
+def test_get_soil_moisture_reading_by_id_route(client, farm):
+    post_resp = client.post(f"/farms/{farm.id}/soil-moisture", json={
+        "recorded_at": "2026-06-01T00:00:00Z",
+        "soil_moisture_pct": 25.0,
+    })
+    reading_id = post_resp.json()["id"]
+    response = client.get(f"/farms/{farm.id}/soil-moisture/{reading_id}")
+    assert response.status_code == 200
+    assert response.json()["soil_moisture_pct"] == 25.0
+
+
+def test_get_soil_moisture_reading_not_found_route(client, farm):
+    response = client.get(f"/farms/{farm.id}/soil-moisture/9999")
+    assert response.status_code == 404
+
+
+def test_water_stress_with_et0_forecast_route(client, farm):
+    response = client.get(f"/farms/{farm.id}/water-stress", params={"et0_forecast_mm_per_day": 5.0})
+    assert response.status_code == 200
+    data = response.json()
+    assert data["stress_in_days"] is not None
+
+
