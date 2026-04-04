@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional
 from datetime import datetime, date
 
@@ -25,8 +25,7 @@ class FarmResponse(FarmBase):
     agronomist_id: int
     created_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class WeatherReadingCreate(BaseModel):
     farm_id: int
@@ -51,8 +50,7 @@ class WeatherReadingBody(BaseModel):
 
 class WeatherReadingResponse(WeatherReadingCreate):
     id: int
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class PaginatedWeatherResponse(BaseModel):
     total: int
@@ -72,8 +70,7 @@ class SoilMoistureReadingBody(BaseModel):
 
 class SoilMoistureReadingResponse(SoilMoistureReadingCreate):
     id: int
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class PaginatedSoilMoistureResponse(BaseModel):
     total: int

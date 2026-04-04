@@ -54,6 +54,9 @@ def _compute_et0_day(t_max_c: float, t_min_c: float, ra_mm: float) -> float:
     float
         Reference evapotranspiration (ET0)
     """
+    if t_max_c < t_min_c:
+        raise ValueError(f"t_max_c ({t_max_c}) cannot be less than t_min_c ({t_min_c})")
+
     # Compute mean temperature
     t_mean_c = (t_max_c + t_min_c) / 2
 

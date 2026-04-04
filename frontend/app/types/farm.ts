@@ -15,11 +15,11 @@ export interface Farm {
 }
 
 export interface WaterStressResponse {
-  depletion_mm: number;
+  current_depletion_mm: number;
   paw_mm: number;
   raw_threshold_mm: number;
   stress_in_days: number | null;
-  warning: string;
+  warning: boolean;
   severity: string | null;
 }
 
@@ -37,6 +37,20 @@ export interface WeatherReading {
 export interface SoilMoistureReading {
   id: number;
   farm_id: number;
-  moisture_pct: number;
+  soil_moisture_pct: number;
   recorded_at: string;
+}
+
+export interface PaginatedWeatherResponse {
+  results: WeatherReading[];
+  total: number;
+  skip: number;
+  limit: number;
+}
+
+export interface PaginatedSoilMoistureResponse {
+  results: SoilMoistureReading[];
+  total: number;
+  skip: number;
+  limit: number;
 }
