@@ -3,5 +3,6 @@
 __pycache__/
 *.pyc
 data/
-.DS_Storenode_modules/
+.DS_Store
+node_modules/
 .coverage
