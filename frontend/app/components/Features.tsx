@@ -1,28 +1,31 @@
+import { Droplets, Cloud, TrendingUp, Bell } from "lucide-react";
+import { LucideIcon } from "lucide-react";
+
 export default function Features() {
-  const features = [
+  const features: { title: string; description: string; icon: LucideIcon }[] = [
     {
-      title: "Soil Monitoring",
+      title: "So[il Monitoring",
       description:
         "Track soil moisture levels across all your fields in real time with sensor-driven data.",
-      icon: "💧",
+      icon: Droplets,
     },
     {
       title: "Weather Integration",
       description:
         "Automatic weather data collection including rainfall, temperature, humidity, and evapotranspiration.",
-      icon: "🌤",
+      icon: Cloud,
     },
     {
       title: "Stress Predictions",
       description:
         "ML-powered forecasts that tell you when water stress is coming days before it happens.",
-      icon: "📊",
+      icon: TrendingUp,
     },
     {
       title: "Smart Alerts",
       description:
         "Get notified when your fields need attention so you never miss a critical irrigation window.",
-      icon: "🔔",
+      icon: Bell,
     },
   ];
 
@@ -42,7 +45,7 @@ export default function Features() {
               key={feature.title}
               className="bg-zinc-900 border border-zinc-800 rounded-xl p-6"
             >
-              <span className="text-3xl">{feature.icon}</span>
+              <span className="text-3xl">{<feature.icon />}</span>
               <h3 className="text-white font-semibold text-lg mt-4 mb-2">
                 {feature.title}
               </h3>

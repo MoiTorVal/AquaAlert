@@ -7,7 +7,7 @@ export default function Hero() {
       <div className="absolute inset-0 bg-zinc-900" />
 
       {/* Content */}
-      <div className="relative z-1 max-w-7xl mx-auto px-8 w-full">
+      <div className="relative z-10 max-w-7xl mx-auto px-8 w-full">
         <p className="text-amber-400 text-sm font-semibold tracking-widest uppercase mb-4">
           Water Stress Monitoring
         </p>
@@ -24,15 +24,13 @@ export default function Hero() {
         <div className="flex gap-4 mt-10">
           <Link
             href="/login"
-            className="bg-amber-500 hover:bg-amber-400 text-zinc-900 font-semibold px-8 py-3 rounded-full        
-  transition-colors"
+            className="bg-amber-500 hover:bg-amber-400 text-zinc-900 font-semibold px-8 py-3 rounded-full transition-colors"
           >
             Get Started
           </Link>
           <Link
             href="/contact"
-            className="border border-white/30 hover:border-white text-white font-semibold px-8 py-3 rounded-full 
-  transition-colors"
+            className="border border-white/30 hover:border-white text-white font-semibold px-8 py-3 rounded-full transition-colors"
           >
             Learn More
           </Link>

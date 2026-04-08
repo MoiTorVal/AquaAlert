@@ -15,7 +15,7 @@ export default function Home() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const res = await getFarms(1); // hardcoded to fetch the first page of farms
+        const res = await getFarms(1);
         const farmList = res.data;
         setFarms(farmList);
 
