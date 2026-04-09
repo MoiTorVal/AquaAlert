@@ -28,10 +28,10 @@ export default function Navbar() {
   return (
     <nav
       className={`fixed top-0 left-0 right-0 w-full z-50 transition-colors duration-300 border-b border-white/10  
-  ${scrolled || menuOpen ? "bg-zinc-950 border-zinc-800" : "bg-zinc-950/80 backdrop-blue-md"}`}
+  ${scrolled || menuOpen ? "bg-zinc-950 border-zinc-800" : "bg-zinc-950/80 backdrop-blur-md"}`}
     >
       <div className="max-w-7xl mx-auto px-8 py-6 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-0.01">
+        <Link href="/" className="flex items-center gap-1">
           <Logo />
           <span className="text-white text-lg font-semibold tracking-tight">
             WaterStress
