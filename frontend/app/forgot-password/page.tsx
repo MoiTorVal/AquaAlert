@@ -1,5 +1,5 @@
 import Link from "next/link";
-import ForgotPasswordForm from "./ForgotpasswordForm";
+import ForgotPasswordForm from "./ForgotPasswordForm";
 
 export const metadata = {
   title: "Forgot Password | WaterStress",
