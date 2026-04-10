@@ -96,21 +96,21 @@ export default function Navbar() {
             className={mobileNavLink}
             onClick={() => setMenuOpen(false)}
           >
-            HOME
+            Home
           </Link>
           <Link
             href="/contact"
             className={mobileNavLink}
             onClick={() => setMenuOpen(false)}
           >
-            CONTACT
+            Contact
           </Link>
           <Link
             href="/login"
             className={mobileNavLink}
             onClick={() => setMenuOpen(false)}
           >
-            LOG IN
+            Log In
           </Link>
           <Link
             href="/signup"
