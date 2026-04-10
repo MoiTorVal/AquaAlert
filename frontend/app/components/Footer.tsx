@@ -15,8 +15,7 @@ export default function Footer() {
               </span>
             </Link>
             <p className="text-[#8A8F98] text-sm mt-4 leading-relaxed">
-              Soil moisture monitoring and water stress predictions for
-              agronomists and farmers.
+              Soil moisture monitoring and water stress predictions for farmers.
             </p>
           </div>
 
@@ -37,10 +36,10 @@ export default function Footer() {
                 </li>
                 <li>
                   <Link
-                    href="/dashboard"
+                    href="/demo"
                     className="text-[#8A8F98] hover:text-white text-sm transition-colors"
                   >
-                    Dashboard
+                    Demo
                   </Link>
                 </li>
               </ul>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Input from "../components/Input";
+import Spinner from "../components/Spinner";
 
 export default function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
@@ -58,30 +59,7 @@ export default function ForgotPasswordForm() {
         className="bg-[#E6E6E6] hover:bg-white disabled:opacity-50 text-[#08090A] font-semibold py-3 rounded-lg 
   transition-colors mt-2"
       >
-        {loading ? (
-          <svg
-            className="animate-spin h-5 w-5 mx-auto text-[#08090A]"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle
-              className="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="4"
-            />
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8v8H4z"
-            />
-          </svg>
-        ) : (
-          "Send Reset Link"
-        )}
+        {loading ? <Spinner /> : "Send Reset Link"}
       </button>
     </form>
   );

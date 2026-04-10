@@ -276,7 +276,6 @@ export default function PrivacyPage() {
           <h4 className="text-base font-medium text-[#E6E6E6]">
             Service Providers
           </h4>{" "}
-          13:36 [141/1533]
           <ul className="list-disc list-inside space-y-1">
             <li>Hosting, technology, and communication providers</li>
             <li>Cloud infrastructure providers (e.g., AWS)</li>
