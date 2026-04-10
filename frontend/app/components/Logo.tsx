@@ -21,7 +21,7 @@ export default function Logo() {
            L220 202
            L200 235
            L228 258"
-        stroke="#0a0a0a"
+        stroke="var(--color-bg-primary)"
         strokeWidth="10"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -39,14 +39,14 @@ export default function Logo() {
       />
       <path
         d="M145 205 C132 205,126 212,122 220"
-        stroke="#000000"
+        stroke="var(--color-bg-primary)"
         strokeWidth="6"
         strokeLinecap="round"
         opacity="0.55"
       />
       <path
         d="M275 205 C288 205,294 212,298 220"
-        stroke="#000000"
+        stroke="var(--color-bg-primary)"
         strokeWidth="6"
         strokeLinecap="round"
         opacity="0.55"

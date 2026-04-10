@@ -5,10 +5,10 @@ import { useState, useEffect } from "react";
 import Logo from "./Logo";
 
 const navLink =
-  "text-white/60 hover:text-white hover:bg-[#8A8F98]/20 px-3 py-1.5 rounded-lg transition-colors";
+  "text-white/60 hover:text-white hover:bg-muted/20 px-3 py-1.5 rounded-lg transition-colors";
 
 const mobileNavLink =
-  "text-white/60 hover:text-white hover:bg-[#8A8F98]/20 px-3 py-2.5 rounded-lg transition-colors text-base";
+  "text-white/60 hover:text-white hover:bg-muted/20 px-3 py-2.5 rounded-lg transition-colors text-base";
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -52,7 +52,7 @@ export default function Navbar() {
           </Link>
           <Link
             href="/signup"
-            className="bg-[#E6E6E6] hover:bg-white text-[#08090A] font-semibold px-4 py-1.5 rounded-lg
+            className="bg-btn-secondary hover:bg-white text-btn-text font-semibold px-4 py-1.5 rounded-lg
   transition-colors"
           >
             Sign up
@@ -114,7 +114,7 @@ export default function Navbar() {
           </Link>
           <Link
             href="/signup"
-            className="bg-[#E6E6E6] hover:bg-white text-[#08090A] font-semibold px-4 py-2.5 rounded-lg
+            className="bg-btn-secondary hover:bg-white text-btn-text font-semibold px-4 py-2.5 rounded-lg
   transition-colors text-center mt-2"
             onClick={() => setMenuOpen(false)}
           >

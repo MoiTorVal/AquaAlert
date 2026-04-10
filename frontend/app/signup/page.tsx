@@ -71,17 +71,17 @@ export default function SignupPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-4">
+    <main className="min-h-screen bg-bg-primary flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="bg-white/5 rounded-2xl border border-white/10 px-10 py-10">
           <div className="text-center mb-8">
             <Link
               href="/"
-              className="text-2xl font-bold text-[#F7F8F8] tracking-tight"
+              className="text-2xl font-bold text-surface tracking-tight"
             >
               WaterStress
             </Link>
-            <p className="text-[#8A8F98] text-sm mt-1">Create your account</p>
+            <p className="text-text-muted text-sm mt-1">Create your account</p>
           </div>
 
           <form
@@ -131,7 +131,7 @@ export default function SignupPage() {
             <button
               type="submit"
               disabled={loading}
-              className="bg-[#E6E6E6] hover:bg-white disabled:opacity-50 text-[#08090A] font-semibold py-3
+              className="bg-btn-secondary hover:bg-white disabled:opacity-50 text-btn-text font-semibold py-3
   rounded-lg transition-colors mt-2"
             >
               {loading ? <Spinner /> : "Create Account"}
@@ -139,11 +139,11 @@ export default function SignupPage() {
           </form>
         </div>
 
-        <p className="text-center text-sm text-[#8A8F98] mt-6">
+        <p className="text-center text-sm text-text-muted mt-6">
           Already have an account?{" "}
           <Link
             href="/login"
-            className="text-[#E6E6E6] hover:text-white hover:underline font-medium"
+            className="text-surface hover:text-white hover:underline font-medium"
           >
             Log In
           </Link>

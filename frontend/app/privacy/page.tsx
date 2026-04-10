@@ -8,19 +8,19 @@ export const metadata = {
 
 export default function PrivacyPage() {
   return (
-    <main className="min-h-screen bg-[#0a0a0a] pt-32 pb-24 px-8">
+    <main className="min-h-screen bg-bg-primary pt-32 pb-24 px-8">
       <div className="max-w-3xl mx-auto">
         <Link
           href="/"
-          className="text-[#8A8F98] hover:text-white text-sm font-medium"
+          className="text-text-muted hover:text-white text-sm font-medium"
         >
           &larr; Back to home
         </Link>
 
-        <h1 className="text-4xl font-bold text-[#F7F8F8] mt-8 mb-2">
+        <h1 className="text-4xl font-bold text-surface mt-8 mb-2">
           Privacy Policy
         </h1>
-        <p className="text-[#8A8F98] text-sm mb-12">
+        <p className="text-text-muted text-sm mb-12">
           Effective date: April 9, 2026
         </p>
 
@@ -40,7 +40,7 @@ export default function PrivacyPage() {
             times subject to our{" "}
             <Link
               href="/terms"
-              className="text-[#E6E6E6] hover:text-white underline"
+              className="text-text-muted hover:text-white underline"
             >
               Terms of Service
             </Link>
@@ -51,7 +51,7 @@ export default function PrivacyPage() {
             If you have a disability, you may access this Privacy Policy in an
             alternative format by contacting support@waterstress.io.
           </p>
-          <h2 className="text-xl font-semibold text-[#F7F8F8] pt-4">
+          <h2 className="text-xl font-semibold text-surface pt-4">
             What this Privacy Policy Covers
           </h2>
           <p>
@@ -67,13 +67,13 @@ export default function PrivacyPage() {
             companies we don&apos;t own or control or people we don&apos;t
             manage.
           </p>
-          <h2 className="text-xl font-semibold text-[#F7F8F8] pt-4">
+          <h2 className="text-xl font-semibold text-surface pt-4">
             Personal Data
           </h2>
-          <h3 className="text-lg font-medium text-[#F7F8F8]">
+          <h3 className="text-lg font-medium text-surface">
             Categories of Personal Data We Collect
           </h3>
-          <h4 className="text-base font-medium text-[#E6E6E6]">
+          <h4 className="text-base font-medium text-surface ">
             Profile or Contact Data
           </h4>
           <ul className="list-disc list-inside space-y-1">
@@ -83,23 +83,21 @@ export default function PrivacyPage() {
             <li>Physical address or farm/ranch mailing address</li>
             <li>Unique identifiers such as account passwords</li>
           </ul>
-          <p className="text-xs text-[#8A8F98]">
+          <p className="text-xs text-text-muted">
             Shared with: Service Providers; Parties You Authorize, Access, or
             Authenticate.
           </p>
-          <h4 className="text-base font-medium text-[#E6E6E6]">Payment Data</h4>
+          <h4 className="text-base font-medium text-surface">Payment Data</h4>
           <ul className="list-disc list-inside space-y-1">
             <li>Payment card type</li>
             <li>Last 4 digits of payment card</li>
             <li>Billing address, phone number, and email</li>
           </ul>
-          <p className="text-xs text-[#8A8F98]">
+          <p className="text-xs text-text-muted">
             Shared with: Service Providers (specifically our payment processing
             partner, Stripe).
           </p>
-          <h4 className="text-base font-medium text-[#E6E6E6]">
-            Device/IP Data
-          </h4>
+          <h4 className="text-base font-medium text-surface">Device/IP Data</h4>
           <ul className="list-disc list-inside space-y-1">
             <li>IP address</li>
             <li>Device ID</li>
@@ -108,13 +106,11 @@ export default function PrivacyPage() {
               Services
             </li>
           </ul>
-          <p className="text-xs text-[#8A8F98]">
+          <p className="text-xs text-text-muted">
             Shared with: Service Providers; Parties You Authorize, Access, or
             Authenticate.
           </p>
-          <h4 className="text-base font-medium text-[#E6E6E6]">
-            Web Analytics
-          </h4>
+          <h4 className="text-base font-medium text-surface">Web Analytics</h4>
           <ul className="list-disc list-inside space-y-1">
             <li>Web page interactions</li>
             <li>
@@ -126,11 +122,11 @@ export default function PrivacyPage() {
               the Services
             </li>
           </ul>
-          <p className="text-xs text-[#8A8F98]">
+          <p className="text-xs text-text-muted">
             Shared with: Service Providers; Parties You Authorize, Access, or
             Authenticate.
           </p>
-          <h4 className="text-base font-medium text-[#E6E6E6]">
+          <h4 className="text-base font-medium text-surface">
             Field and Sensor Data
           </h4>
           <ul className="list-disc list-inside space-y-1">
@@ -153,11 +149,11 @@ export default function PrivacyPage() {
               evapotranspiration, soil moisture depletion, and stress forecasts
             </li>
           </ul>
-          <p className="text-xs text-[#8A8F98]">
+          <p className="text-xs text-text-muted">
             Shared with: Service Providers; Groundwater Sustainability Agencies
             (only if you opt in to SGMA compliance reporting).
           </p>
-          <h4 className="text-base font-medium text-[#E6E6E6]">
+          <h4 className="text-base font-medium text-surface">
             Other Identifying Information that You Voluntarily Choose to Provide
           </h4>
           <ul className="list-disc list-inside space-y-1">
@@ -166,11 +162,11 @@ export default function PrivacyPage() {
               you send us
             </li>
           </ul>
-          <p className="text-xs text-[#8A8F98]">
+          <p className="text-xs text-text-muted">
             Shared with: Service Providers; Business Partners; Parties You
             Authorize, Access, or Authenticate.
           </p>
-          <h3 className="text-lg font-medium text-[#F7F8F8]">
+          <h3 className="text-lg font-medium text-surface">
             Categories of Sources of Personal Data
           </h3>
           <ul className="list-disc list-inside space-y-1">
@@ -197,10 +193,10 @@ export default function PrivacyPage() {
               help us provide you with customer support.
             </li>
           </ul>
-          <h3 className="text-lg font-medium text-[#F7F8F8]">
+          <h3 className="text-lg font-medium text-surface">
             Our Commercial or Business Purposes for Collecting Personal Data
           </h3>
-          <h4 className="text-base font-medium text-[#E6E6E6]">
+          <h4 className="text-base font-medium text-surface">
             Providing, Customizing, and Improving the Services
           </h4>
           <ul className="list-disc list-inside space-y-1">
@@ -227,13 +223,13 @@ export default function PrivacyPage() {
             </li>
             <li>Fraud protection, security, and debugging</li>
           </ul>
-          <h4 className="text-base font-medium text-[#E6E6E6]">
+          <h4 className="text-base font-medium text-surface">
             Marketing the Services
           </h4>
           <ul className="list-disc list-inside space-y-1">
             <li>Marketing and selling the Services</li>
           </ul>
-          <h4 className="text-base font-medium text-[#E6E6E6]">
+          <h4 className="text-base font-medium text-surface">
             Corresponding with You
           </h4>
           <ul className="list-disc list-inside space-y-1">
@@ -243,7 +239,7 @@ export default function PrivacyPage() {
               your preferences
             </li>
           </ul>
-          <h4 className="text-base font-medium text-[#E6E6E6]">
+          <h4 className="text-base font-medium text-surface">
             Meeting Legal Requirements and Enforcing Legal Terms
           </h4>
           <ul className="list-disc list-inside space-y-1">
@@ -263,7 +259,7 @@ export default function PrivacyPage() {
             the Personal Data we collected for materially different, unrelated,
             or incompatible purposes without providing you notice.
           </p>
-          <h2 className="text-xl font-semibold text-[#F7F8F8] pt-4">
+          <h2 className="text-xl font-semibold text-surface pt-4">
             How We Share Your Personal Data
           </h2>
           <p>
@@ -273,7 +269,7 @@ export default function PrivacyPage() {
             may constitute a &quot;sale&quot; of your Personal Data. For more
             information, please refer to the state-specific sections below.
           </p>{" "}
-          <h4 className="text-base font-medium text-[#E6E6E6]">
+          <h4 className="text-base font-medium text-surface">
             Service Providers
           </h4>{" "}
           <ul className="list-disc list-inside space-y-1">
@@ -288,7 +284,7 @@ export default function PrivacyPage() {
               Personal Data)
             </li>
           </ul>
-          <h4 className="text-base font-medium text-[#E6E6E6]">
+          <h4 className="text-base font-medium text-surface">
             Business Partners
           </h4>
           <ul className="list-disc list-inside space-y-1">
@@ -298,7 +294,7 @@ export default function PrivacyPage() {
               or opportunities
             </li>
           </ul>
-          <h4 className="text-base font-medium text-[#E6E6E6]">
+          <h4 className="text-base font-medium text-surface">
             Groundwater Sustainability Agencies
           </h4>
           <p>
@@ -307,14 +303,14 @@ export default function PrivacyPage() {
             Groundwater Sustainability Agency in your basin. We will not share
             this data without your explicit consent.
           </p>
-          <h4 className="text-base font-medium text-[#E6E6E6]">
+          <h4 className="text-base font-medium text-surface">
             Parties You Authorize, Access, or Authenticate
           </h4>
           <ul className="list-disc list-inside space-y-1">
             <li>Third-party services you access through the Services</li>
             <li>Other users within your organization, if applicable</li>
           </ul>
-          <h4 className="text-base font-medium text-[#E6E6E6]">
+          <h4 className="text-base font-medium text-surface">
             Legal Obligations
           </h4>
           <p>
@@ -322,7 +318,7 @@ export default function PrivacyPage() {
             conjunction with any of the activities set forth under &quot;Meeting
             Legal Requirements and Enforcing Legal Terms&quot; above.
           </p>
-          <h4 className="text-base font-medium text-[#E6E6E6]">
+          <h4 className="text-base font-medium text-surface">
             Business Transfers
           </h4>
           <p>
@@ -334,7 +330,7 @@ export default function PrivacyPage() {
             becomes subject to different privacy and security policies and
             practices.
           </p>
-          <h4 className="text-base font-medium text-[#E6E6E6]">
+          <h4 className="text-base font-medium text-surface">
             Data that is Not Personal Data
           </h4>
           <p>
@@ -345,7 +341,7 @@ export default function PrivacyPage() {
             business purposes, provided that we will not share such data in a
             manner that could identify you.
           </p>{" "}
-          <h2 className="text-xl font-semibold text-[#F7F8F8] pt-4">
+          <h2 className="text-xl font-semibold text-surface pt-4">
             Sensor and Field Data
           </h2>
           <p>
@@ -382,7 +378,7 @@ export default function PrivacyPage() {
               and is used in calculations on your behalf.
             </li>
           </ul>
-          <h2 className="text-xl font-semibold text-[#F7F8F8] pt-4">
+          <h2 className="text-xl font-semibold text-surface pt-4">
             Tracking Tools and Opt-Out
           </h2>
           <p>
@@ -420,7 +416,7 @@ export default function PrivacyPage() {
             have to manually adjust some preferences every time you visit our
             website and some functionalities may not work.
           </p>
-          <h2 className="text-xl font-semibold text-[#F7F8F8] pt-4">
+          <h2 className="text-xl font-semibold text-surface pt-4">
             Data Security and Retention
           </h2>
           <p>
@@ -441,7 +437,7 @@ export default function PrivacyPage() {
             following account closure, after which it is permanently deleted or
             anonymized.
           </p>
-          <h2 className="text-xl font-semibold text-[#F7F8F8] pt-4">
+          <h2 className="text-xl font-semibold text-surface pt-4">
             Personal Data of Children
           </h2>
           <p>
@@ -454,10 +450,10 @@ export default function PrivacyPage() {
             under 13 may have provided us Personal Information, please contact
             us at support@waterstress.io.
           </p>
-          <h2 className="text-xl font-semibold text-[#F7F8F8] pt-4">
+          <h2 className="text-xl font-semibold text-surface pt-4">
             State Law Privacy Rights
           </h2>
-          <h3 className="text-lg font-medium text-[#F7F8F8]">
+          <h3 className="text-lg font-medium text-surface">
             California Resident Rights
           </h3>
           <p>
@@ -467,7 +463,7 @@ export default function PrivacyPage() {
             marketing purposes; in order to submit such a request, please
             contact us at support@waterstress.io.
           </p>
-          <h3 className="text-lg font-medium text-[#F7F8F8]">
+          <h3 className="text-lg font-medium text-surface">
             Nevada Resident Rights
           </h3>
           <p>
@@ -477,10 +473,10 @@ export default function PrivacyPage() {
             subject line &quot;Nevada Do Not Sell Request&quot; and providing us
             with your name and the email address associated with your account.
           </p>
-          <h2 className="text-xl font-semibold text-[#F7F8F8] pt-4">
+          <h2 className="text-xl font-semibold text-surface pt-4">
             European Union Data Subject Rights
           </h2>
-          <h3 className="text-lg font-medium text-[#F7F8F8]">EU Residents</h3>
+          <h3 className="text-lg font-medium text-surface">EU Residents</h3>
           <p>
             If you are a resident of the European Union (&quot;EU&quot;), United
             Kingdom, Lichtenstein, Norway, or Iceland, you may have additional
@@ -489,7 +485,7 @@ export default function PrivacyPage() {
             will be the controller of your Personal Data processed in connection
             with the Services.
           </p>
-          <h4 className="text-base font-medium text-[#E6E6E6]">
+          <h4 className="text-base font-medium text-surface">
             Processing Grounds
           </h4>
           <ul className="list-disc list-inside space-y-1">
@@ -517,7 +513,7 @@ export default function PrivacyPage() {
               subjects.
             </li>
           </ul>
-          <h4 className="text-base font-medium text-[#E6E6E6]">
+          <h4 className="text-base font-medium text-surface">
             EU Data Subject Rights
           </h4>
           <p>
@@ -559,7 +555,7 @@ export default function PrivacyPage() {
               the supervisory authority of your country or EU Member State.
             </li>
           </ul>
-          <h4 className="text-base font-medium text-[#E6E6E6]">
+          <h4 className="text-base font-medium text-surface">
             Transfers of Personal Data
           </h4>
           <p>
@@ -570,17 +566,17 @@ export default function PrivacyPage() {
             authorize WaterStress to transfer, store, and process your
             information to and in the U.S., and possibly other countries.
           </p>
-          <h2 className="text-xl font-semibold text-[#F7F8F8] pt-4">
+          <h2 className="text-xl font-semibold text-surface pt-4">
             Changes to this Privacy Policy
           </h2>
           <p>
             We may need to change this Privacy Policy from time to time, but we
             will alert you to any such changes by placing a notice on the
-            WaterStress website, by sending you an email, and/or by some other
+            WaterStress website, by sendinqg you an email, and/or by some other
             means. If you use the Services after any changes to the Privacy
             Policy have been posted, that means you agree to all of the changes.
           </p>
-          <h2 className="text-xl font-semibold text-[#F7F8F8] pt-4">
+          <h2 className="text-xl font-semibold text-surface pt-4">
             Contact Information
           </h2>
           <p>

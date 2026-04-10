@@ -7,23 +7,23 @@ export const metadata = {
 
 export default function TermsPage() {
   return (
-    <main className="min-h-screen bg-[#0a0a0a] pt-32 pb-24 px-8">
+    <main className="min-h-screen bg-bg-primary pt-32 pb-24 px-8">
       <div className="max-w-3xl mx-auto">
         <Link
           href="/"
-          className="text-[#8A8F98] hover:text-white text-sm font-medium"
+          className="text-text-muted hover:text-white text-sm font-medium"
         >
           &larr; Back to home
         </Link>
 
-        <h1 className="text-4xl font-bold text-[#F7F8F8] mt-8 mb-2">
+        <h1 className="text-4xl font-bold text-surface mt-8 mb-2">
           Terms of Service
         </h1>
-        <p className="text-[#8A8F98] text-sm mb-12">
+        <p className="text-text-muted text-sm mb-12">
           Effective date: April 9, 2026
         </p>
 
-        <div className="prose prose-invert prose-sm max-w-none text-white/70 space-y-8">
+        <div className="prose prose-invert prose-sm max-w-none text-text-muted space-y-8">
           <p className="uppercase text-xs leading-relaxed">
             THESE TERMS OF SERVICE (the &quot;Agreement&quot;) GOVERN
             CUSTOMER&apos;S RECEIPT, ACCESS TO, AND USE OF THE SERVICE (AS
@@ -48,7 +48,7 @@ export default function TermsPage() {
           </p>
           {/* Table of Contents */}
           <div className="border border-white/10 rounded-lg p-6 space-y-2">
-            <h2 className="text-base font-semibold text-[#F7F8F8] mb-3">
+            <h2 className="text-base font-semibold text-surface mb-3">
               Table of Contents
             </h2>
             <ol className="list-decimal list-inside space-y-1 text-sm">
@@ -65,10 +65,10 @@ export default function TermsPage() {
             </ol>
           </div>
           {/* 1. The Service */}
-          <h2 className="text-xl font-semibold text-[#F7F8F8] pt-4">
+          <h2 className="text-xl font-semibold text-surface pt-4">
             1. The Service
           </h2>
-          <h3 className="text-lg font-medium text-[#F7F8F8]">
+          <h3 className="text-lg font-medium text-surface">
             1.1 Service Description
           </h3>
           <p>
@@ -91,7 +91,7 @@ export default function TermsPage() {
             (collectively the &quot;Software&quot;) or receive a copy of the
             Software itself.
           </p>
-          <h3 className="text-lg font-medium text-[#F7F8F8]">
+          <h3 className="text-lg font-medium text-surface">
             1.2 Customer&apos;s Subscription
           </h3>
           <p>
@@ -107,7 +107,7 @@ export default function TermsPage() {
             purposes and not for the benefit of any third party
             (&quot;Users&quot;).
           </p>
-          <h3 className="text-lg font-medium text-[#F7F8F8]">
+          <h3 className="text-lg font-medium text-surface">
             1.3 WaterStress&apos;s Ownership
           </h3>
           <p>
@@ -124,7 +124,7 @@ export default function TermsPage() {
             and any rights not expressly granted to Customer in this Agreement
             are expressly reserved by WaterStress.
           </p>
-          <h3 className="text-lg font-medium text-[#F7F8F8]">
+          <h3 className="text-lg font-medium text-surface">
             1.4 Agronomic Disclaimer
           </h3>
           <p>
@@ -139,9 +139,7 @@ export default function TermsPage() {
             solely responsible for all irrigation decisions made using the
             Service.
           </p>
-          <h3 className="text-lg font-medium text-[#F7F8F8]">
-            1.5 Permissions
-          </h3>
+          <h3 className="text-lg font-medium text-surface">1.5 Permissions</h3>
           <p>
             {" "}
             13:42 [420/1980] The Service contains customizable settings allowing
@@ -171,10 +169,10 @@ export default function TermsPage() {
             authority).
           </p>
           {/* 2. Restrictions */}
-          <h2 className="text-xl font-semibold text-[#F7F8F8] pt-4">
+          <h2 className="text-xl font-semibold text-surface pt-4">
             2. Restrictions
           </h2>
-          <h3 className="text-lg font-medium text-[#F7F8F8]">
+          <h3 className="text-lg font-medium text-surface">
             2.1 Customer&apos;s Responsibilities
           </h3>
           <p>
@@ -186,7 +184,7 @@ export default function TermsPage() {
             and Customer will be responsible for breach of any such obligation
             and/or restriction by a User.
           </p>
-          <h3 className="text-lg font-medium text-[#F7F8F8]">
+          <h3 className="text-lg font-medium text-surface">
             2.2 Use Restrictions
           </h3>
           <p>
@@ -256,7 +254,7 @@ export default function TermsPage() {
             the suspension as quickly as practicable after the circumstances
             leading to the suspension have been resolved.
           </p>
-          <h3 className="text-lg font-medium text-[#F7F8F8]">
+          <h3 className="text-lg font-medium text-surface">
             2.3 API Access Restrictions
           </h3>
           <p>
@@ -268,7 +266,7 @@ export default function TermsPage() {
             the API or cease providing the API at any time.
           </p>
           {/* 3. Third-Party Applications */}
-          <h2 className="text-xl font-semibold text-[#F7F8F8] pt-4">
+          <h2 className="text-xl font-semibold text-surface pt-4">
             3. Third-Party Applications
           </h2>
           <p>
@@ -294,10 +292,10 @@ export default function TermsPage() {
             inability to use Third-Party Applications.
           </p>
           {/* 4. Payment Obligations */}
-          <h2 className="text-xl font-semibold text-[#F7F8F8] pt-4">
+          <h2 className="text-xl font-semibold text-surface pt-4">
             4. Payment Obligations
           </h2>
-          <h3 className="text-lg font-medium text-[#F7F8F8]">4.1 Fees</h3>
+          <h3 className="text-lg font-medium text-surface">4.1 Fees</h3>
           <p>
             Customer will pay for access to and use of the Service as set forth
             on the applicable Order (&quot;Fees&quot;). All Fees will be paid in
@@ -308,7 +306,7 @@ export default function TermsPage() {
             discretion. Customer always has the right to choose not to renew its
             subscription if it does not agree with any new or revised Fees.
           </p>
-          <h3 className="text-lg font-medium text-[#F7F8F8]">4.2 Payment</h3>
+          <h3 className="text-lg font-medium text-surface">4.2 Payment</h3>
           <p>
             WaterStress, either directly or through its third-party payment
             processor (&quot;Payment Processor&quot;), will charge Customer for
@@ -327,7 +325,7 @@ export default function TermsPage() {
             to correct any errors or mistakes that the Payment Processor makes
             even if WaterStress has already requested or received payment.
           </p>
-          <h3 className="text-lg font-medium text-[#F7F8F8]">4.3 Taxes</h3>
+          <h3 className="text-lg font-medium text-surface">4.3 Taxes</h3>
           <p>
             Fees do not include any taxes, levies, duties, or similar
             governmental assessments of any nature, including, for example,
@@ -342,7 +340,7 @@ export default function TermsPage() {
             advance. For clarity, WaterStress is solely responsible for taxes
             assessable against it based on its income, property, and employees.
           </p>
-          <h3 className="text-lg font-medium text-[#F7F8F8]">
+          <h3 className="text-lg font-medium text-surface">
             4.4 Failure to Pay
           </h3>
           <p>
@@ -357,10 +355,10 @@ export default function TermsPage() {
             appeared, to receive an adjustment or credit.
           </p>
           {/* 5. Term and Termination */}
-          <h2 className="text-xl font-semibold text-[#F7F8F8] pt-4">
+          <h2 className="text-xl font-semibold text-surface pt-4">
             5. Term and Termination
           </h2>
-          <h3 className="text-lg font-medium text-[#F7F8F8]">
+          <h3 className="text-lg font-medium text-surface">
             5.1 Agreement Term and Renewals
           </h3>
           <p>
@@ -383,9 +381,7 @@ export default function TermsPage() {
             workspace within the Service, Customer will not have access to the
             Free Version.
           </p>
-          <h3 className="text-lg font-medium text-[#F7F8F8]">
-            5.2 Termination
-          </h3>
+          <h3 className="text-lg font-medium text-surface">5.2 Termination</h3>
           <p>
             Either party may terminate this Agreement upon written notice to the
             other party if the other party materially breaches this Agreement
@@ -394,7 +390,7 @@ export default function TermsPage() {
             terminate Customer&apos;s access to the Free Version at any time
             upon notice to Customer.
           </p>
-          <h3 className="text-lg font-medium text-[#F7F8F8]">
+          <h3 className="text-lg font-medium text-surface">
             5.3 Effect of Termination
           </h3>
           <p>
@@ -419,7 +415,7 @@ export default function TermsPage() {
             the Free Version but such account is not used for a period of one
             (1) year or more.
           </p>
-          <h3 className="text-lg font-medium text-[#F7F8F8]">5.4 Survival</h3>
+          <h3 className="text-lg font-medium text-surface">5.4 Survival</h3>
           <p>
             Sections titled &quot;WaterStress&apos;s Ownership,&quot;
             &quot;Agronomic Disclaimer,&quot; &quot;Third-Party
@@ -430,17 +426,17 @@ export default function TermsPage() {
             expiration of this Agreement.
           </p>
           {/* 6. Warranties and Disclaimers */}
-          <h2 className="text-xl font-semibold text-[#F7F8F8] pt-4">
+          <h2 className="text-xl font-semibold text-surface pt-4">
             6. Warranties and Disclaimers
           </h2>
-          <h3 className="text-lg font-medium text-[#F7F8F8]">6.1 Warranties</h3>
+          <h3 className="text-lg font-medium text-surface">6.1 Warranties</h3>
           <p>
             Customer represents and warrants that all User Submissions submitted
             by Users follow all applicable laws, rules, and regulations, and
             that any field data, crop parameters, or sensor readings provided to
             the Service are accurate to the best of Customer&apos;s knowledge.
           </p>
-          <h3 className="text-lg font-medium text-[#F7F8F8]">
+          <h3 className="text-lg font-medium text-surface">
             6.2 Warranty Disclaimer
           </h3>
           <p className="uppercase text-xs leading-relaxed">
@@ -462,7 +458,7 @@ export default function TermsPage() {
             LAW.
           </p>
           {/* 7. Limitation of Liability */}
-          <h2 className="text-xl font-semibold text-[#F7F8F8] pt-4">
+          <h2 className="text-xl font-semibold text-surface pt-4">
             7. Limitation of Liability
           </h2>
           <p className="uppercase text-xs leading-relaxed">
@@ -490,10 +486,10 @@ export default function TermsPage() {
             ANY FAILURE OF ESSENTIAL PURPOSE OF ANY LIMITED REMEDY.
           </p>
           {/* 8. Confidentiality */}
-          <h2 className="text-xl font-semibold text-[#F7F8F8] pt-4">
+          <h2 className="text-xl font-semibold text-surface pt-4">
             8. Confidentiality
           </h2>
-          <h3 className="text-lg font-medium text-[#F7F8F8]">8.1 Definition</h3>
+          <h3 className="text-lg font-medium text-surface">8.1 Definition</h3>
           <p>
             Each party (the &quot;Receiving Party&quot;) understands that the
             other party (the &quot;Disclosing Party&quot;) may disclose
@@ -518,7 +514,7 @@ export default function TermsPage() {
             Receiving Party without use or reference to the Disclosing
             Party&apos;s Confidential Information.
           </p>
-          <h3 className="text-lg font-medium text-[#F7F8F8]">
+          <h3 className="text-lg font-medium text-surface">
             8.2 Protection and Use of Confidential Information
           </h3>
           <p>
@@ -539,7 +535,7 @@ export default function TermsPage() {
             use the Disclosing Party&apos;s Confidential Information for any
             purpose other than to fulfill its obligations under this Agreement.
           </p>
-          <h3 className="text-lg font-medium text-[#F7F8F8]">
+          <h3 className="text-lg font-medium text-surface">
             8.3 Compelled Access or Disclosure
           </h3>
           <p>
@@ -550,7 +546,7 @@ export default function TermsPage() {
             and reasonable assistance, at the Disclosing Party&apos;s cost, if
             the Disclosing Party wishes to contest the access or disclosure.
           </p>
-          <h3 className="text-lg font-medium text-[#F7F8F8]">8.4 Feedback</h3>
+          <h3 className="text-lg font-medium text-surface">8.4 Feedback</h3>
           <p>
             Customer may from time to time provide suggestions, comments, or
             other feedback with respect to the Service (&quot;Feedback&quot;).
@@ -566,8 +562,8 @@ export default function TermsPage() {
             provider of such Feedback.
           </p>{" "}
           {/* 9. Data */}
-          <h2 className="text-xl font-semibold text-[#F7F8F8] pt-4">9. Data</h2>
-          <h3 className="text-lg font-medium text-[#F7F8F8]">
+          <h2 className="text-xl font-semibold text-surface pt-4">9. Data</h2>
+          <h3 className="text-lg font-medium text-surface">
             9.1 User Information
           </h3>
           <p>
@@ -588,7 +584,7 @@ export default function TermsPage() {
             or technical issues; (c) as required by law; and (d) as expressly
             permitted in writing by Customer.
           </p>
-          <h3 className="text-lg font-medium text-[#F7F8F8]">
+          <h3 className="text-lg font-medium text-surface">
             9.2 User Submissions
           </h3>
           <p>
@@ -601,9 +597,7 @@ export default function TermsPage() {
             all field data, crop configurations, and sensor readings, and there
             are no implied licenses under this Agreement.
           </p>
-          <h3 className="text-lg font-medium text-[#F7F8F8]">
-            9.3 Service Data
-          </h3>
+          <h3 className="text-lg font-medium text-surface">9.3 Service Data</h3>
           <p>
             As Customer (including its Users) interacts with the Service, the
             Service collects data pertaining to the performance of the Service
@@ -619,7 +613,7 @@ export default function TermsPage() {
             WaterStress the right to identify Customer (including its Users) as
             the source of any Service Data.
           </p>
-          <h3 className="text-lg font-medium text-[#F7F8F8]">
+          <h3 className="text-lg font-medium text-surface">
             9.4 SGMA Compliance Reporting
           </h3>
           <p>
@@ -631,7 +625,7 @@ export default function TermsPage() {
             approved prior to any such transmission. Customer may revoke this
             authorization at any time through the Service settings.
           </p>{" "}
-          <h3 className="text-lg font-medium text-[#F7F8F8]">
+          <h3 className="text-lg font-medium text-surface">
             9.5 Data Protection
           </h3>
           <p>
@@ -647,17 +641,17 @@ export default function TermsPage() {
             of which can be found at waterstress.io/dpa.
           </p>
           {/* 10. General Terms */}
-          <h2 className="text-xl font-semibold text-[#F7F8F8] pt-4">
+          <h2 className="text-xl font-semibold text-surface pt-4">
             10. General Terms
           </h2>
-          <h3 className="text-lg font-medium text-[#F7F8F8]">10.1 Publicity</h3>
+          <h3 className="text-lg font-medium text-surface">10.1 Publicity</h3>
           <p>
             Provided that Customer gives its prior written consent, WaterStress
             may identify Customer and use and display Customer&apos;s name,
             logo, trademarks, or service marks on WaterStress&apos;s website and
             in WaterStress&apos;s marketing materials.
           </p>
-          <h3 className="text-lg font-medium text-[#F7F8F8]">
+          <h3 className="text-lg font-medium text-surface">
             10.2 Force Majeure
           </h3>
           <p>
@@ -669,7 +663,7 @@ export default function TermsPage() {
             action, drought, flood, extreme weather events, or disruptions to
             public weather data sources.
           </p>
-          <h3 className="text-lg font-medium text-[#F7F8F8]">10.3 Changes</h3>
+          <h3 className="text-lg font-medium text-surface">10.3 Changes</h3>
           <p>
             Customer acknowledges that the Service is an online,
             subscription-based product, and that to provide improved customer
@@ -680,7 +674,7 @@ export default function TermsPage() {
             thirty (30) days prior to such changes taking effect and posting
             such changes at waterstress.io/terms.
           </p>
-          <h3 className="text-lg font-medium text-[#F7F8F8]">
+          <h3 className="text-lg font-medium text-surface">
             10.4 Relationship of the Parties
           </h3>
           <p>
@@ -688,7 +682,7 @@ export default function TermsPage() {
             create a partnership, franchise, joint venture, agency, fiduciary,
             or employment relationship between the parties.
           </p>
-          <h3 className="text-lg font-medium text-[#F7F8F8]">
+          <h3 className="text-lg font-medium text-surface">
             10.5 No Third-Party Beneficiaries
           </h3>
           <p>
@@ -696,7 +690,7 @@ export default function TermsPage() {
             who is not a party to this Agreement may not enforce any of its
             terms under any applicable law.
           </p>
-          <h3 className="text-lg font-medium text-[#F7F8F8]">
+          <h3 className="text-lg font-medium text-surface">
             10.6 Email Communications
           </h3>
           <p>
@@ -708,7 +702,7 @@ export default function TermsPage() {
             to the email(s) provided through the Service. Notices will be deemed
             to have been duly given the business day after they are sent.
           </p>
-          <h3 className="text-lg font-medium text-[#F7F8F8]">
+          <h3 className="text-lg font-medium text-surface">
             10.7 Amendment and Waivers
           </h3>
           <p>
@@ -718,7 +712,7 @@ export default function TermsPage() {
             in exercising any right under this Agreement will constitute a
             waiver of that right.
           </p>
-          <h3 className="text-lg font-medium text-[#F7F8F8]">
+          <h3 className="text-lg font-medium text-surface">
             10.8 Severability
           </h3>
           <p>
@@ -730,9 +724,7 @@ export default function TermsPage() {
             fullest extent permitted by law, and the remaining provisions of
             this Agreement will remain in effect.
           </p>
-          <h3 className="text-lg font-medium text-[#F7F8F8]">
-            10.9 Assignment
-          </h3>
+          <h3 className="text-lg font-medium text-surface">10.9 Assignment</h3>
           <p>
             Neither party will assign or delegate any of its rights or
             obligations hereunder, whether by operation of law or otherwise,
@@ -744,7 +736,7 @@ export default function TermsPage() {
             substantially all WaterStress&apos;s assets. Any purported
             assignment in violation of this section is void.
           </p>
-          <h3 className="text-lg font-medium text-[#F7F8F8]">
+          <h3 className="text-lg font-medium text-surface">
             10.10 Governing Law and Venue
           </h3>
           <p>
@@ -762,7 +754,7 @@ export default function TermsPage() {
             Agreement, the prevailing party will be entitled to recover its
             reasonable costs and attorney&apos;s fees.
           </p>
-          <h3 className="text-lg font-medium text-[#F7F8F8]">
+          <h3 className="text-lg font-medium text-surface">
             10.11 Entire Agreement
           </h3>
           <p>

@@ -24,11 +24,11 @@ export default function Input({
   rows = 3,
 }: InputProps) {
   const sharedClass =
-    "bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-[#F7F8F8] placeholder:text-[#8A8F98] focus:outline-none focus:border-white/30 transition-colors";
+    "bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-surface placeholder:text-muted focus:outline-none focus:border-white/30 transition-colors";
 
   return (
     <div className="flex flex-col gap-1">
-      <label htmlFor={name} className="text-[#8A8F98] text-sm font-medium">
+      <label htmlFor={name} className="text-muted text-sm font-medium">
         {label}
       </label>
       {multiline ? (

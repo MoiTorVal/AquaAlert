@@ -63,12 +63,12 @@ export default function ContactPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#0a0a0a] pt-32 pb-24 px-8">
+    <main className="min-h-screen bg-bg-primary pt-32 pb-24 px-8">
       <div className="max-w-7xl mx-auto">
-        <p className="text-[#8A8F98] text-sm font-medium tracking-widest uppercase mb-4">
+        <p className="text-text-muted text-sm font-medium tracking-widest uppercase mb-4">
           Get In Touch
         </p>
-        <h1 className="text-4xl md:text-5xl font-semibold text-[#F7F8F8] mb-16 max-w-xl">
+        <h1 className="text-4xl md:text-5xl font-semibold text-surface mb-16 max-w-xl">
           We&apos;d love to hear from you
         </h1>
 
@@ -88,10 +88,10 @@ export default function ContactPage() {
           {/* Right — form */}
           {submitted ? (
             <div className="flex flex-col justify-center h-full gap-4">
-              <h2 className="text-2xl font-semibold text-[#F7F8F8]">
+              <h2 className="text-2xl font-semibold text-surface">
                 Message sent!
               </h2>
-              <p className="text-[#8A8F98]">
+              <p className="text-text-muted">
                 Thanks for reaching out. We&apos;ll get back to you shortly.
               </p>
             </div>
@@ -144,7 +144,7 @@ export default function ContactPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="bg-[#E6E6E6] hover:bg-white disabled:opacity-50 text-[#08090A] font-semibold px-8
+                className="bg-btn-secondary hover:bg-white disabled:opacity-50 text-btn-text font-semibold px-8
 py-3 rounded-lg transition-colors w-fit"
               >
                 {loading ? "Sending..." : "Send Message"}

@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 export default function Hero() {
   return (
     <section className="relative min-h-screen flex items-center pt-24">
-      <div className="absolute inset-0 bg-[#0a0a0a]" />
+      <div className="absolute inset-0 bg-bg-primary" />
 
       <div className="relative z-10 max-w-7xl mx-auto px-8 w-full grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
         {/* Left — text */}
@@ -14,7 +14,7 @@ export default function Hero() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1.1, ease: "easeOut", delay: 0.3 }}
-            className="text-[#F7F8F8] text-3xl sm:text-5xl md:text-7xl font-bold leading-tight"
+            className="text-surface text-3xl sm:text-5xl md:text-7xl font-bold leading-tight"
           >
             Know when your crops need water before they stress
           </motion.h1>
@@ -37,7 +37,7 @@ export default function Hero() {
           >
             <Link
               href="/login"
-              className="bg-[#E6E6E6] hover:bg-white text-[#08090A] font-semibold px-6 py-2 rounded-lg transition-colors text-sm"
+              className="bg-btn-secondary hover:bg-white text-btn-text font-semibold px-6 py-2 rounded-lg transition-colors text-sm"
             >
               Get Started
             </Link>
@@ -59,10 +59,10 @@ export default function Hero() {
           transition={{ duration: 1.2, ease: "easeOut", delay: 0.5 }}
         >
           <div className="bg-white/5 border border-white/10 rounded-2xl aspect-[4/3] flex flex-col items-center justify-center gap-4">
-            <p className="text-[#8A8F98] text-sm">See it in action</p>
+            <p className="text-muted text-sm">See it in action</p>
             <Link
               href="/demo"
-              className="bg-[#E6E6E6] hover:bg-white text-[#08090A] font-semibold px-6 py-2.5 rounded-lg transition-colors text-sm"
+              className="bg-btn-secondary hover:bg-white text-btn-text font-semibold px-6 py-2.5 rounded-lg transition-colors text-sm"
             >
               Try the Demo
             </Link>

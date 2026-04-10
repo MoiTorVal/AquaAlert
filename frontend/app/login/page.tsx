@@ -59,17 +59,17 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-4">
+    <main className="min-h-screen bg-bg-primary flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="bg-white/5 rounded-2xl border border-white/10 px-10 py-10">
           <div className="text-center mb-8">
             <Link
               href="/"
-              className="text-2xl font-bold text-[#F7F8F8] tracking-tight"
+              className="text-2xl font-bold text-surface tracking-tight"
             >
               WaterStress
             </Link>
-            <p className="text-[#8A8F98] text-sm mt-1">
+            <p className="text-text-muted text-sm mt-1">
               Sign in to your account
             </p>
           </div>
@@ -112,18 +112,18 @@ rounded-lg transition-colors mt-2"
           <div className="text-center mt-6">
             <Link
               href="/forgot-password"
-              className="text-[#E6E6E6] hover:text-white hover:underline text-sm"
+              className="text-text-muted hover:text-white hover:underline text-sm"
             >
               Forgot password?
             </Link>
           </div>
         </div>
 
-        <p className="text-center text-sm text-[#8A8F98] mt-6">
+        <p className="text-center text-sm text-text-muted mt-6">
           Don&apos;t have an account?{" "}
           <Link
             href="/signup"
-            className="text-[#E6E6E6] hover:text-white hover:underline font-medium"
+            className="text-surface hover:text-white hover:underline font-medium"
           >
             Create Account
           </Link>

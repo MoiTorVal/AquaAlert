@@ -29,12 +29,12 @@ export default function Features() {
   ];
 
   return (
-    <section className="bg-[#0a0a0a] py-24 px-8 border-t border-white/10">
+    <section className="bg-bg-primary py-24 px-8 border-t border-white/10">
       <div className="max-w-7xl mx-auto">
-        <p className="text-[#8A8F98] text-sm font-medium tracking-widest uppercase mb-4">
+        <p className="text-muted text-sm font-medium tracking-widest uppercase mb-4">
           What We Offer
         </p>
-        <h2 className="text-3xl md:text-4xl font-semibold text-[#F7F8F8] mb-16 max-w-2xl">
+        <h2 className="text-3xl md:text-4xl font-semibold text-surface mb-16 max-w-2xl">
           Everything you need to stay ahead of water stress
         </h2>
 
@@ -44,11 +44,11 @@ export default function Features() {
               key={feature.title}
               className="bg-white/5 border border-white/10 rounded-xl p-6 hover:bg-white/[0.07] transition-colors"
             >
-              <feature.icon size={24} className="text-[#F7F8F8]" />
-              <h3 className="text-[#F7F8F8] font-semibold text-base mt-4 mb-2">
+              <feature.icon size={24} className="text-surface" />
+              <h3 className="text-surface font-semibold text-base mt-4 mb-2">
                 {feature.title}
               </h3>
-              <p className="text-[#8A8F98] text-sm leading-relaxed">
+              <p className="text-muted text-sm leading-relaxed">
                 {feature.description}
               </p>
             </div>

@@ -29,10 +29,10 @@ export default function ForgotPasswordForm() {
   if (submitted) {
     return (
       <div className="text-center py-4">
-        <h2 className="text-xl font-semibold text-[#F7F8F8] mb-2">
+        <h2 className="text-xl font-semibold text-surface mb-2">
           Check your inbox
         </h2>
-        <p className="text-[#8A8F98] text-sm">
+        <p className="text-text-muted text-sm">
           If an account exists for {email}, we&apos;ll send a reset link.
         </p>
       </div>
@@ -56,7 +56,7 @@ export default function ForgotPasswordForm() {
       <button
         type="submit"
         disabled={loading}
-        className="bg-[#E6E6E6] hover:bg-white disabled:opacity-50 text-[#08090A] font-semibold py-3 rounded-lg 
+        className="bg-btn-secondary hover:bg-white disabled:opacity-50 text-btn-text font-semibold py-3 rounded-lg 
   transition-colors mt-2"
       >
         {loading ? <Spinner /> : "Send Reset Link"}
