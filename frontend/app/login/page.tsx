@@ -69,7 +69,7 @@ export default function LoginPage() {
             >
               WaterStress
             </Link>
-            <p className="text-text-muted text-sm mt-1">
+            <p className="text-muted text-sm mt-1">
               Sign in to your account
             </p>
           </div>
@@ -112,14 +112,14 @@ rounded-lg transition-colors mt-2"
           <div className="text-center mt-6">
             <Link
               href="/forgot-password"
-              className="text-text-muted hover:text-white hover:underline text-sm"
+              className="text-muted hover:text-white hover:underline text-sm"
             >
               Forgot password?
             </Link>
           </div>
         </div>
 
-        <p className="text-center text-sm text-text-muted mt-6">
+        <p className="text-center text-sm text-muted mt-6">
           Don&apos;t have an account?{" "}
           <Link
             href="/signup"

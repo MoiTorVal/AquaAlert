@@ -5,10 +5,10 @@ import { useState, useEffect } from "react";
 import Logo from "./Logo";
 
 const navLink =
-  "text-white/60 hover:text-white hover:bg-muted/20 px-3 py-1.5 rounded-lg transition-colors";
+  "text-white/80 hover:text-white hover:bg-muted/20 px-3 py-1.5 rounded-lg transition-colors";
 
 const mobileNavLink =
-  "text-white/60 hover:text-white hover:bg-muted/20 px-3 py-2.5 rounded-lg transition-colors text-base";
+  "text-white/80 hover:text-white hover:bg-muted/20 px-3 py-2.5 rounded-lg transition-colors text-base";
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);

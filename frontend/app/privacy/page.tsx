@@ -12,7 +12,7 @@ export default function PrivacyPage() {
       <div className="max-w-3xl mx-auto">
         <Link
           href="/"
-          className="text-text-muted hover:text-white text-sm font-medium"
+          className="text-muted hover:text-white text-sm font-medium"
         >
           &larr; Back to home
         </Link>
@@ -20,7 +20,7 @@ export default function PrivacyPage() {
         <h1 className="text-4xl font-bold text-surface mt-8 mb-2">
           Privacy Policy
         </h1>
-        <p className="text-text-muted text-sm mb-12">
+        <p className="text-muted text-sm mb-12">
           Effective date: April 9, 2026
         </p>
 
@@ -40,7 +40,7 @@ export default function PrivacyPage() {
             times subject to our{" "}
             <Link
               href="/terms"
-              className="text-text-muted hover:text-white underline"
+              className="text-muted hover:text-white underline"
             >
               Terms of Service
             </Link>
@@ -83,7 +83,7 @@ export default function PrivacyPage() {
             <li>Physical address or farm/ranch mailing address</li>
             <li>Unique identifiers such as account passwords</li>
           </ul>
-          <p className="text-xs text-text-muted">
+          <p className="text-xs text-muted">
             Shared with: Service Providers; Parties You Authorize, Access, or
             Authenticate.
           </p>
@@ -93,7 +93,7 @@ export default function PrivacyPage() {
             <li>Last 4 digits of payment card</li>
             <li>Billing address, phone number, and email</li>
           </ul>
-          <p className="text-xs text-text-muted">
+          <p className="text-xs text-muted">
             Shared with: Service Providers (specifically our payment processing
             partner, Stripe).
           </p>
@@ -106,7 +106,7 @@ export default function PrivacyPage() {
               Services
             </li>
           </ul>
-          <p className="text-xs text-text-muted">
+          <p className="text-xs text-muted">
             Shared with: Service Providers; Parties You Authorize, Access, or
             Authenticate.
           </p>
@@ -122,7 +122,7 @@ export default function PrivacyPage() {
               the Services
             </li>
           </ul>
-          <p className="text-xs text-text-muted">
+          <p className="text-xs text-muted">
             Shared with: Service Providers; Parties You Authorize, Access, or
             Authenticate.
           </p>
@@ -149,7 +149,7 @@ export default function PrivacyPage() {
               evapotranspiration, soil moisture depletion, and stress forecasts
             </li>
           </ul>
-          <p className="text-xs text-text-muted">
+          <p className="text-xs text-muted">
             Shared with: Service Providers; Groundwater Sustainability Agencies
             (only if you opt in to SGMA compliance reporting).
           </p>
@@ -162,7 +162,7 @@ export default function PrivacyPage() {
               you send us
             </li>
           </ul>
-          <p className="text-xs text-text-muted">
+          <p className="text-xs text-muted">
             Shared with: Service Providers; Business Partners; Parties You
             Authorize, Access, or Authenticate.
           </p>

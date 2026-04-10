@@ -34,6 +34,7 @@ export default function Input({
       {multiline ? (
         <textarea
           id={name}
+          aria-describedby={error ? `${name}-error` : undefined}
           name={name}
           value={value}
           onChange={onChange}
@@ -44,6 +45,7 @@ export default function Input({
       ) : (
         <input
           id={name}
+          aria-describedby={error ? `${name}-error` : undefined}
           name={name}
           type={type}
           value={value}
@@ -52,7 +54,11 @@ export default function Input({
           className={sharedClass}
         />
       )}
-      {error && <p className="text-red-400 text-xs">{error}</p>}
+      {error && (
+        <p id={`${name}-error`} className="text-red-400 text-xs">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

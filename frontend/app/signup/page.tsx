@@ -81,7 +81,7 @@ export default function SignupPage() {
             >
               WaterStress
             </Link>
-            <p className="text-text-muted text-sm mt-1">Create your account</p>
+            <p className="text-muted text-sm mt-1">Create your account</p>
           </div>
 
           <form
@@ -139,7 +139,7 @@ export default function SignupPage() {
           </form>
         </div>
 
-        <p className="text-center text-sm text-text-muted mt-6">
+        <p className="text-center text-sm text-muted mt-6">
           Already have an account?{" "}
           <Link
             href="/login"

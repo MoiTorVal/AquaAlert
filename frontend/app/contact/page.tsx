@@ -65,7 +65,7 @@ export default function ContactPage() {
   return (
     <main className="min-h-screen bg-bg-primary pt-32 pb-24 px-8">
       <div className="max-w-7xl mx-auto">
-        <p className="text-text-muted text-sm font-medium tracking-widest uppercase mb-4">
+        <p className="text-muted text-sm font-medium tracking-widest uppercase mb-4">
           Get In Touch
         </p>
         <h1 className="text-4xl md:text-5xl font-semibold text-surface mb-16 max-w-xl">
@@ -91,7 +91,7 @@ export default function ContactPage() {
               <h2 className="text-2xl font-semibold text-surface">
                 Message sent!
               </h2>
-              <p className="text-text-muted">
+              <p className="text-muted">
                 Thanks for reaching out. We&apos;ll get back to you shortly.
               </p>
             </div>

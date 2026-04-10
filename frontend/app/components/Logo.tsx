@@ -1,6 +1,8 @@
 export default function Logo() {
   return (
     <svg
+      aria-label="Irrigation Decision Tool Logo"
+      role="img"
       width="32"
       height="32"
       viewBox="0 0 420 420"

@@ -32,7 +32,7 @@ export default function ForgotPasswordForm() {
         <h2 className="text-xl font-semibold text-surface mb-2">
           Check your inbox
         </h2>
-        <p className="text-text-muted text-sm">
+        <p className="text-muted text-sm">
           If an account exists for {email}, we&apos;ll send a reset link.
         </p>
       </div>

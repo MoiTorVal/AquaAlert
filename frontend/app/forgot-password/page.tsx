@@ -17,13 +17,13 @@ export default function ForgotPasswordPage() {
             >
               WaterStress
             </Link>
-            <p className="text-text-muted text-sm mt-1">Reset your password</p>
+            <p className="text-muted text-sm mt-1">Reset your password</p>
           </div>
 
           <ForgotPasswordForm />
         </div>
 
-        <p className="text-center text-sm text-text-muted mt-6">
+        <p className="text-center text-sm text-muted mt-6">
           Remember your password?{" "}
           <Link
             href="/login"

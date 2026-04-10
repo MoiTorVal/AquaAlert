@@ -11,7 +11,7 @@ export default function TermsPage() {
       <div className="max-w-3xl mx-auto">
         <Link
           href="/"
-          className="text-text-muted hover:text-white text-sm font-medium"
+          className="text-muted hover:text-white text-sm font-medium"
         >
           &larr; Back to home
         </Link>
@@ -19,11 +19,11 @@ export default function TermsPage() {
         <h1 className="text-4xl font-bold text-surface mt-8 mb-2">
           Terms of Service
         </h1>
-        <p className="text-text-muted text-sm mb-12">
+        <p className="text-muted text-sm mb-12">
           Effective date: April 9, 2026
         </p>
 
-        <div className="prose prose-invert prose-sm max-w-none text-text-muted space-y-8">
+        <div className="prose prose-invert prose-sm max-w-none text-muted space-y-8">
           <p className="uppercase text-xs leading-relaxed">
             THESE TERMS OF SERVICE (the &quot;Agreement&quot;) GOVERN
             CUSTOMER&apos;S RECEIPT, ACCESS TO, AND USE OF THE SERVICE (AS

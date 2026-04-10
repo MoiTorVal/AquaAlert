@@ -12,7 +12,7 @@ export default function DemoPage() {
         <h1 className="text-4xl font-bold text-surface mb-4">
           Demo coming soon
         </h1>
-        <p className="text-text-muted mb-8">
+        <p className="text-muted mb-8">
           We&apos;re building something worth waiting for.
         </p>
         <Link
