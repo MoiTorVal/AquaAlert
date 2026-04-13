@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Water Stress Monitoring Dashboard",
+  title: "WaterStress",
   description:
     "Water stress alerts and monitoring for efficient irrigation management",
 };

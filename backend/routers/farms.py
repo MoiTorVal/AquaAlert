@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from backend.database import SessionLocal
 from backend import crud
 from backend.schemas import (
     FarmCreate, FarmUpdate, FarmResponse, WaterStressResponse,
@@ -8,16 +7,8 @@ from backend.schemas import (
     SoilMoistureReadingBody, SoilMoistureReadingCreate, SoilMoistureReadingResponse, PaginatedSoilMoistureResponse, WaterStressResponse
 )
 from backend.services.water_balance import compute_water_balance
-from typing import List
 from datetime import datetime, timezone, timedelta
-
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+from backend.database import get_db
 
 router = APIRouter()
 
@@ -32,7 +23,7 @@ def read_farm(farm_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Farm not found")
     return db_farm
 
-@router.get("/", response_model=List[FarmResponse])
+@router.get("/", response_model=list[FarmResponse])
 def read_farms(agronomist_id: int, skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
     return crud.get_farms(db=db, agronomist_id=agronomist_id, skip=skip, limit=limit)
 

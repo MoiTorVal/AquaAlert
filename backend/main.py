@@ -11,8 +11,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
-    Base.metadata.create_all(bind=engine)
+async def lifespan(app: FastAPI):   
     try:
         with engine.connect() as connection:
             connection.execute(text("SELECT 1"))

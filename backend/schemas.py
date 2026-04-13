@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, EmailStr
 from typing import Optional
 from datetime import datetime, date
 
@@ -82,6 +82,29 @@ class WaterStressResponse(BaseModel):
     current_depletion_mm: float
     paw_mm: float
     raw_threshold_mm: float
-    stress_in_days: Optional[int]                                                           
+    stress_in_days: Optional[int]                  
     warning: bool
     severity: str
+
+class SignupRequest(BaseModel):
+    email: EmailStr
+    password: str
+    name: str
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+class UserResponse(BaseModel):
+    id: int
+    email: str
+    name: str | None
+
+    model_config = ConfigDict(from_attributes=True)

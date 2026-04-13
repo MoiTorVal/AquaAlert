@@ -5,15 +5,15 @@ from backend.database import Base
 
 default=lambda: datetime.now(timezone.utc)
 
-class Agronomist(Base):
-    __tablename__ = "agronomists"
+class User(Base):
+    __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(100), nullable=False)
     email = Column(String(150), unique=True, nullable=False)
-    phone = Column(String(20))
+    hashed_password = Column(String(255), nullable=False)
+    name = Column(String(100))
     created_at = Column(DateTime, default=default)
-
+    
 class WeatherReading(Base):
     __tablename__ = "weather_readings"
 
@@ -34,6 +34,7 @@ class Farm(Base):
     __tablename__ = "farms"
 
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     name = Column(String(100), nullable=False)
     location = Column(String(255))
     created_at = Column(DateTime, default=default)
