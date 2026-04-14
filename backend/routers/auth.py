@@ -9,8 +9,11 @@ from backend.schemas import (
     TokenResponse,
 )
 from backend.auth import hash_password, verify_password, create_access_token
+import logging
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
+
 
 @router.post("/signup", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 def signup(body: SignupRequest, db: Session = Depends(get_db)):
@@ -44,3 +47,10 @@ def login(body: LoginRequest, db: Session = Depends(get_db)):
   )
     token = create_access_token({"sub": str(user.id)})
     return TokenResponse(access_token=token)
+
+@router.post("/forgot-password", status_code=status.HTTP_200_OK)
+def forgot_password(body: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.email == body.email).first()
+    if user:
+        logger.info("Password reset requested for %s", body.email)
+    return {"message": "If that email is registered, you'll receive a password reset link shortly."}

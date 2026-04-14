@@ -18,11 +18,11 @@ class FarmBase(BaseModel):
 class FarmUpdate(FarmBase):
     pass
 class FarmCreate(FarmBase):
-    agronomist_id: int
+    pass
 
 class FarmResponse(FarmBase):
     id: int
-    agronomist_id: int
+    user_id: int
     created_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
@@ -56,7 +56,7 @@ class PaginatedWeatherResponse(BaseModel):
     total: int
     skip: int
     limit: int
-    results: list[WeatherReadingResponse]
+    results=[WeatherReadingResponse.model_validate(r) for r in results]
 
 class SoilMoistureReadingCreate(BaseModel):
     farm_id: int

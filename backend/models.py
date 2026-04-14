@@ -46,7 +46,6 @@ class Farm(Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     location: Mapped[str | None] = mapped_column(String(255))
     created_at: Mapped[datetime | None] = mapped_column(DateTime, default=default)
-    agronomist_id: Mapped[int] = mapped_column(Integer, ForeignKey("agronomists.id"), nullable=False)
     area_hectares: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
     crop_type: Mapped[str | None] = mapped_column(String(100))
     soil_type: Mapped[str | None] = mapped_column(String(100))
