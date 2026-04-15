@@ -77,8 +77,6 @@ def read_soil_moisture_readings_by_farm(
         db=db, farm_id=farm_id, skip=skip, limit=limit,
         start_date=start_date, end_date=end_date,
     )
-    if results is None:
-        raise HTTPException(status_code=404, detail="Farm not found")
     total = crud.count_soil_moisture_readings_by_farm(
         db=db, farm_id=farm_id, start_date=start_date, end_date=end_date,
     )

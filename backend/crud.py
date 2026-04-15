@@ -82,6 +82,20 @@ def get_soil_moisture_reading(db: Session, farm_id: int, reading_id: int):
         models.SoilMoistureReading.farm_id == farm_id,
     ).first()
 
+
+def _soil_moisture_readings_base_query(
+    db: Session,
+    farm_id: int,
+    start_date: datetime | None,
+    end_date: datetime | None,
+):
+    query = db.query(models.SoilMoistureReading).filter(models.SoilMoistureReading.farm_id == farm_id)
+    if start_date:
+        query = query.filter(models.SoilMoistureReading.recorded_at >= start_date)
+    if end_date:
+        query = query.filter(models.SoilMoistureReading.recorded_at <= end_date)
+    return query
+
 def get_soil_moisture_readings_by_farm(
     db: Session,
     farm_id: int,
@@ -89,15 +103,14 @@ def get_soil_moisture_readings_by_farm(
     limit: int = 10,
     start_date: datetime | None = None,
     end_date: datetime | None = None,
-) -> list | None:
-    if not db.query(models.Farm).filter(models.Farm.id == farm_id).first():
-        return None
-    query = db.query(models.SoilMoistureReading).filter(models.SoilMoistureReading.farm_id == farm_id)
-    if start_date:
-        query = query.filter(models.SoilMoistureReading.recorded_at >= start_date)
-    if end_date:
-        query = query.filter(models.SoilMoistureReading.recorded_at <= end_date)
-    return query.order_by(models.SoilMoistureReading.recorded_at).offset(skip).limit(limit).all()
+) -> list[models.SoilMoistureReading]:
+    return (
+        _soil_moisture_readings_base_query(db, farm_id, start_date, end_date)
+        .order_by(models.SoilMoistureReading.recorded_at)
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
 
 def count_soil_moisture_readings_by_farm(
     db: Session,
@@ -105,12 +118,7 @@ def count_soil_moisture_readings_by_farm(
     start_date: datetime | None = None,
     end_date: datetime | None = None,
 ) -> int:
-    query = db.query(models.SoilMoistureReading).filter(models.SoilMoistureReading.farm_id == farm_id)
-    if start_date:
-        query = query.filter(models.SoilMoistureReading.recorded_at >= start_date)
-    if end_date:
-        query = query.filter(models.SoilMoistureReading.recorded_at <= end_date)
-    return query.count()
+    return _soil_moisture_readings_base_query(db, farm_id, start_date, end_date).count()
 
 def get_latest_soil_moisture_reading(db: Session, farm_id: int):
     return db.query(models.SoilMoistureReading).filter(models.SoilMoistureReading.farm_id == farm_id).order_by(models.SoilMoistureReading.recorded_at.desc()).first()

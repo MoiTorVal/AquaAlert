@@ -4,8 +4,9 @@ from backend.database import engine, Base
 from backend import models
 from sqlalchemy import text
 from contextlib import asynccontextmanager
-from backend.routers import farms
+from backend.routers import farms, auth
 import logging
+
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -31,3 +32,4 @@ app.add_middleware(
 )
 
 app.include_router(farms.router, prefix="/farms", tags=["farms"])
+app.include_router(auth.router, prefix="/auth", tags=["auth"])

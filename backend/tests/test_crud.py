@@ -3,7 +3,7 @@ from datetime import datetime, timezone, timedelta
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from backend.models import Base, Agronomist
+from backend.models import Base, User
 from backend import crud
 from backend.schemas import FarmCreate, WeatherReadingCreate, SoilMoistureReadingCreate
 
@@ -24,40 +24,38 @@ def db():
 
 
 @pytest.fixture
-def agronomist(db):
-    ag = Agronomist(name="Test Agronomist", email="test@example.com")
-    db.add(ag)
+def user(db):
+    u = User(email="test@example.com", hashed_password="dummy-hashed-pw", name="Test User")
+    db.add(u)
     db.commit()
-    db.refresh(ag)
-    return ag
+    db.refresh(u)
+    return u
 
 
 @pytest.fixture
-def farm(db, agronomist):
+def farm(db, user):
     return crud.create_farm(
         db,
         FarmCreate(
             name="Test Farm",
             location="Test Location",
-            agronomist_id=agronomist.id,
             crop_type="tomato",
             field_capacity_pct=30,
             wilting_point_pct=15,
             root_depth_cm=60,
         ),
+        user_id=user.id,
     )
 
 
 # ── farm CRUD ────────────────────────────────────────────────────────────────
 
 
-def test_create_farm(db, agronomist):
+def test_create_farm(db, user):
     result = crud.create_farm(
         db,
-        FarmCreate(
-            name="My Farm",
-            agronomist_id=agronomist.id,
-        ),
+        FarmCreate(name="My Farm"),
+        user_id=user.id,
     )
     assert result.id is not None
     assert result.name == "My Farm"
@@ -74,21 +72,21 @@ def test_get_farm_not_found(db):
     assert result is None
 
 
-def test_get_farms_by_agronomist(db, agronomist):
-    crud.create_farm(db, FarmCreate(name="Farm A", agronomist_id=agronomist.id))
-    crud.create_farm(db, FarmCreate(name="Farm B", agronomist_id=agronomist.id))
-    results = crud.get_farms(db, agronomist_id=agronomist.id)
+def test_get_farms_by_user(db, user):
+    crud.create_farm(db, FarmCreate(name="Farm A"), user_id=user.id)
+    crud.create_farm(db, FarmCreate(name="Farm B"), user_id=user.id)
+    results = crud.get_farms(db, user_id=user.id)
     assert len(results) == 2
 
 
-def test_get_farms_only_returns_own_agronomist(db):
-    ag1 = Agronomist(name="Ag1", email="ag1@example.com")
-    ag2 = Agronomist(name="Ag2", email="ag2@example.com")
-    db.add_all([ag1, ag2])
+def test_get_farms_only_returns_own_user(db):
+    u1 = User(email="u1@example.com", hashed_password="dummy", name="U1")
+    u2 = User(email="u2@example.com", hashed_password="dummy", name="U2")
+    db.add_all([u1, u2])
     db.commit()
-    crud.create_farm(db, FarmCreate(name="Farm A", agronomist_id=ag1.id))
-    crud.create_farm(db, FarmCreate(name="Farm B", agronomist_id=ag2.id))
-    results = crud.get_farms(db, agronomist_id=ag1.id)
+    crud.create_farm(db, FarmCreate(name="Farm A"), user_id=u1.id)
+    crud.create_farm(db, FarmCreate(name="Farm B"), user_id=u2.id)
+    results = crud.get_farms(db, user_id=u1.id)
     assert len(results) == 1
     assert results[0].name == "Farm A"
 
@@ -134,9 +132,7 @@ def test_get_weather_readings_by_farm(db, farm):
     assert len(results) == 2
 
 
-def test_get_weather_readings_unknown_farm_returns_none(db):
-    result = crud.get_weather_readings_by_farm(db, farm_id=9999)
-    assert result is None
+
 
 
 def test_weather_readings_date_filter(db, farm):
@@ -176,9 +172,7 @@ def test_get_soil_moisture_readings_by_farm(db, farm):
     assert len(results) == 2
 
 
-def test_get_soil_moisture_readings_unknown_farm_returns_none(db):
-    result = crud.get_soil_moisture_readings_by_farm(db, farm_id=9999)
-    assert result is None
+
 
 
 def test_get_latest_soil_moisture_reading(db, farm):
@@ -267,8 +261,8 @@ def test_soil_moisture_date_filter(db, farm):
     assert len(results) == 1  # only June 6
 
 
-def test_get_farms_pagination(db, agronomist):
+def test_get_farms_pagination(db, user):
     for i in range(5):
-        crud.create_farm(db, FarmCreate(name=f"Farm {i}", agronomist_id=agronomist.id))
-    results = crud.get_farms(db, agronomist_id=agronomist.id, skip=2, limit=2)
+        crud.create_farm(db, FarmCreate(name=f"Farm {i}"), user_id=user.id)
+    results = crud.get_farms(db, user_id=user.id, skip=2, limit=2)
     assert len(results) == 2

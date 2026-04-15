@@ -1,7 +1,7 @@
-from passlib.context import CryptContext
 from datetime import datetime, timedelta, timezone
 import jwt
 import os
+import bcrypt
 
 SECRET_KEY = os.environ.get('SECRET_KEY')
 if not SECRET_KEY:
@@ -9,22 +9,18 @@ if not SECRET_KEY:
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 1 day
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 class TokenExpiredError(Exception):
     pass
 class InvalidTokenError(Exception):
     pass
 
 def hash_password(plain: str) -> str:
-    return pwd_context.hash(plain)
+    return bcrypt.hashpw(plain.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(plain, hashed)
+    return bcrypt.checkpw(plain.encode('utf-8'), hashed.encode('utf-8'))
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
-    if "sub" not in data:
-        raise ValueError("Data must contain 'sub' field")
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
     to_encode["exp"] = expire

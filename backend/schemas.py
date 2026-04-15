@@ -56,7 +56,7 @@ class PaginatedWeatherResponse(BaseModel):
     total: int
     skip: int
     limit: int
-    results=[WeatherReadingResponse.model_validate(r) for r in results]
+    results: list[WeatherReadingResponse]
 
 class SoilMoistureReadingCreate(BaseModel):
     farm_id: int
