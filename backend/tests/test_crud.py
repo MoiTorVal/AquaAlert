@@ -261,6 +261,26 @@ def test_soil_moisture_date_filter(db, farm):
     assert len(results) == 1  # only June 6
 
 
+def test_update_farm(db, farm):
+    from backend.schemas import FarmUpdate
+    updated = crud.update_farm(db, farm.id, FarmUpdate(name="Updated Farm"))
+    assert updated.name == "Updated Farm"
+    assert updated.crop_type == "tomato"
+
+
+def test_update_farm_only_changes_provided_fields(db, farm):
+    from backend.schemas import FarmUpdate
+    updated = crud.update_farm(db, farm.id, FarmUpdate(crop_type="corn"))
+    assert updated.crop_type == "corn"
+    assert updated.name == "Test Farm"
+
+
+def test_update_farm_not_found(db):
+    from backend.schemas import FarmUpdate
+    result = crud.update_farm(db, 9999, FarmUpdate(name="Ghost"))
+    assert result is None
+
+
 def test_get_farms_pagination(db, user):
     for i in range(5):
         crud.create_farm(db, FarmCreate(name=f"Farm {i}"), user_id=user.id)

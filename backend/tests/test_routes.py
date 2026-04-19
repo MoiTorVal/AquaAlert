@@ -145,6 +145,31 @@ def test_delete_farm_other_user_returns_404(client, db):
     assert response.status_code == 404
 
 
+# ── update farm routes ───────────────────────────────────────────────────────
+
+
+def test_update_farm_route(client, farm):
+    response = client.put(f"/farms/{farm.id}", json={"name": "Updated Farm"})
+    assert response.status_code == 200
+    assert response.json()["name"] == "Updated Farm"
+    assert response.json()["crop_type"] == "tomato"
+
+
+def test_update_farm_not_found_route(client):
+    response = client.put("/farms/9999", json={"name": "Ghost"})
+    assert response.status_code == 404
+
+
+def test_update_farm_other_user_returns_404(client, db):
+    other = User(email="other@example.com", hashed_password="dummy", name="Other")
+    db.add(other)
+    db.commit()
+    db.refresh(other)
+    other_farm = crud.create_farm(db, FarmCreate(name="Other Farm"), user_id=other.id)
+    response = client.put(f"/farms/{other_farm.id}", json={"name": "Hacked"})
+    assert response.status_code == 404
+
+
 # ── weather routes ───────────────────────────────────────────────────────────
 
 

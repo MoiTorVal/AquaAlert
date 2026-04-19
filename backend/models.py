@@ -65,15 +65,3 @@ class SoilMoistureReading(Base):
     soil_moisture_pct: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
 
 
-class IrrigationRecommendation(Base):
-    __tablename__ = "irrigation_recommendations"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    farm_id: Mapped[int] = mapped_column(Integer, ForeignKey("farms.id"), nullable=False)
-    weather_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("weather_readings.id"))
-    recommended_at: Mapped[datetime | None] = mapped_column(DateTime, default=default)
-    water_amount_mm: Mapped[Decimal] = mapped_column(Numeric(8, 2), nullable=False)
-    duration_hours: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
-    method: Mapped[str | None] = mapped_column(String(50))
-    notes: Mapped[str | None] = mapped_column(String(500))
-    status: Mapped[str | None] = mapped_column(String(20), default="pending")

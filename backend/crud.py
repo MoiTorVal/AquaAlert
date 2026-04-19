@@ -1,5 +1,5 @@
 from backend import models
-from backend.schemas import FarmCreate, SoilMoistureReadingCreate, WeatherReadingCreate
+from backend.schemas import FarmCreate, FarmUpdate, SoilMoistureReadingCreate, WeatherReadingCreate
 from sqlalchemy.orm import Session
 from datetime import datetime
 
@@ -24,6 +24,14 @@ def delete_farm(db: Session, farm_id: int):
         db.commit()
     return db_farm
 
+def update_farm(db: Session, farm_id: int, farm_update: FarmUpdate):
+    db_farm = db.query(models.Farm).filter(models.Farm.id == farm_id).first()
+    if db_farm:
+        for key, value in farm_update.model_dump(exclude_unset=True).items():
+            setattr(db_farm, key, value)
+        db.commit()
+        db.refresh(db_farm)
+    return db_farm
 
 def create_weather_reading(db: Session, weather_reading: WeatherReadingCreate):
     db_weather_reading = models.WeatherReading(**weather_reading.model_dump())

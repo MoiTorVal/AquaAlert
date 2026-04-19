@@ -10,8 +10,7 @@ from backend import models
 def get_current_user(access_token: str | None = Cookie(default=None), db: Session = Depends(get_db)) -> models.User:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
+        detail="Could not validate credentials"
     )
     if access_token is None:
         raise credentials_exception
@@ -21,8 +20,7 @@ def get_current_user(access_token: str | None = Cookie(default=None), db: Sessio
     except TokenExpiredError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token has expired",
-            headers={"WWW-Authenticate": 'Bearer error="invalid_token"'},
+            detail="Token has expired"
         )
     except InvalidTokenError:
         raise credentials_exception
