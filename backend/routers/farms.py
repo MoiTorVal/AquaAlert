@@ -14,15 +14,20 @@ from backend.models import User
 
 router = APIRouter()
 
+
+def _validate_farm_ownership(db: Session, farm_id: int, user_id: int):
+    db_farm = crud.get_farm(db=db, farm_id=farm_id)
+    if db_farm is None or db_farm.user_id != user_id:
+        raise HTTPException(status_code=404, detail="Farm not found")
+    return db_farm
+
 @router.post("/", response_model=FarmResponse)
 def create_farm(farm: FarmCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     return crud.create_farm(db=db, farm=farm, user_id=current_user.id)
 
 @router.get("/{farm_id}", response_model=FarmResponse)
 def read_farm(farm_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    db_farm = crud.get_farm(db=db, farm_id=farm_id)
-    if db_farm is None or db_farm.user_id != current_user.id:
-        raise HTTPException(status_code=404, detail="Farm not found")
+    db_farm = _validate_farm_ownership(db=db, farm_id=farm_id, user_id=current_user.id)
     return db_farm
 
 @router.get("/", response_model=list[FarmResponse])
@@ -31,10 +36,14 @@ def read_farms(skip: int = 0, limit: int = 10, db: Session = Depends(get_db), cu
 
 @router.delete("/{farm_id}", response_model=FarmResponse)
 def delete_farm(farm_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    db_farm = crud.get_farm(db=db, farm_id=farm_id)
-    if db_farm is None or db_farm.user_id != current_user.id:
-        raise HTTPException(status_code=404, detail="Farm not found")
+    db_farm = _validate_farm_ownership(db=db, farm_id=farm_id, user_id=current_user.id)
     return crud.delete_farm(db=db, farm_id=farm_id)
+
+@router.put("/{farm_id}", response_model=FarmResponse)
+def update_farm(farm_id: int, farm_update: FarmUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    db_farm = _validate_farm_ownership(db=db, farm_id=farm_id, user_id=current_user.id)
+    return crud.update_farm(db=db, farm_id=farm_id, farm_update=farm_update)
+
 
 @router.get("/{farm_id}/weather", response_model=PaginatedWeatherResponse)
 def read_weather_readings_by_farm(
@@ -46,9 +55,7 @@ def read_weather_readings_by_farm(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    db_farm = crud.get_farm(db=db, farm_id=farm_id)
-    if db_farm is None or db_farm.user_id != current_user.id:
-        raise HTTPException(status_code=404, detail="Farm not found")
+    db_farm = _validate_farm_ownership(db=db, farm_id=farm_id, user_id=current_user.id)
     
     results = crud.get_weather_readings_by_farm(
         db=db, farm_id=farm_id, skip=skip, limit=limit,
@@ -70,9 +77,7 @@ def read_soil_moisture_readings_by_farm(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    db_farm = crud.get_farm(db=db, farm_id=farm_id)
-    if db_farm is None or db_farm.user_id != current_user.id:
-        raise HTTPException(status_code=404, detail="Farm not found")
+    db_farm = _validate_farm_ownership(db=db, farm_id=farm_id, user_id=current_user.id)
     results = crud.get_soil_moisture_readings_by_farm(
         db=db, farm_id=farm_id, skip=skip, limit=limit,
         start_date=start_date, end_date=end_date,
@@ -84,9 +89,7 @@ def read_soil_moisture_readings_by_farm(
 
 @router.get("/{farm_id}/soil-moisture/{reading_id}", response_model=SoilMoistureReadingResponse)
 def read_soil_moisture_reading(farm_id: int, reading_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    db_farm = crud.get_farm(db=db, farm_id=farm_id)
-    if db_farm is None or db_farm.user_id != current_user.id:
-        raise HTTPException(status_code=404, detail="Farm not found")
+    _validate_farm_ownership(db=db, farm_id=farm_id, user_id=current_user.id)
     db_reading = crud.get_soil_moisture_reading(db=db, farm_id=farm_id, reading_id=reading_id)
     if db_reading is None:
         raise HTTPException(status_code=404, detail="Soil moisture reading not found")
@@ -94,17 +97,13 @@ def read_soil_moisture_reading(farm_id: int, reading_id: int, db: Session = Depe
 
 @router.post("/{farm_id}/weather", response_model=WeatherReadingResponse)
 def create_weather_reading(farm_id: int, body: WeatherReadingBody, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    db_farm = crud.get_farm(db=db, farm_id=farm_id)
-    if db_farm is None or db_farm.user_id != current_user.id:
-        raise HTTPException(status_code=404, detail="Farm not found")
+    _validate_farm_ownership(db=db, farm_id=farm_id, user_id=current_user.id)
     weather_reading = WeatherReadingCreate(farm_id=farm_id, **body.model_dump())
     return crud.create_weather_reading(db=db, weather_reading=weather_reading)
 
 @router.post("/{farm_id}/soil-moisture", response_model=SoilMoistureReadingResponse)
 def create_soil_moisture_reading(farm_id: int, body: SoilMoistureReadingBody, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    db_farm = crud.get_farm(db=db, farm_id=farm_id)
-    if db_farm is None or db_farm.user_id != current_user.id:
-        raise HTTPException(status_code=404, detail="Farm not found")
+    _validate_farm_ownership(db=db, farm_id=farm_id, user_id=current_user.id)
     soil_moisture_reading = SoilMoistureReadingCreate(farm_id=farm_id, **body.model_dump())
     return crud.create_soil_moisture_reading(db=db, soil_moisture_reading=soil_moisture_reading)
 
@@ -116,10 +115,7 @@ def get_water_stress(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    db_farm = crud.get_farm(db=db, farm_id=farm_id)
-    if db_farm is None or db_farm.user_id != current_user.id:
-        raise HTTPException(status_code=404, detail="Farm not found")
-    
+    db_farm = _validate_farm_ownership(db=db, farm_id=farm_id, user_id=current_user.id)
     start_date = datetime.now(timezone.utc) - timedelta(days=7)        
     end_date = datetime.now(timezone.utc)
 

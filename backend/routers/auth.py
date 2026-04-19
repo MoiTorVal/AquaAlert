@@ -18,6 +18,16 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
+def _set_auth_cookie(response: JSONResponse, token: str):
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        httponly=True,
+        secure=SECURE_COOKIE,
+        samesite="lax",
+        max_age=60 * 60 * 24
+    )
+
 @router.post("/signup", status_code=status.HTTP_201_CREATED)
 def signup(body: SignupRequest, db: Session = Depends(get_db)):
     existing = db.query(models.User).filter(models.User.email == body.email).first()
@@ -38,14 +48,8 @@ def signup(body: SignupRequest, db: Session = Depends(get_db)):
 
     token = create_access_token({"sub": str(user.id)})
     response = JSONResponse(content={"message": "Account created"}, status_code=status.HTTP_201_CREATED)
-    response.set_cookie(
-        key="access_token",
-        value=token,
-        httponly=True,
-        secure=SECURE_COOKIE,
-        samesite="lax",
-        max_age=60 * 60 * 24
-    )
+    _set_auth_cookie(response, token)
+    
     return response
 
 @router.post("/login", status_code=status.HTTP_200_OK)
@@ -54,19 +58,12 @@ def login(body: LoginRequest, db: Session = Depends(get_db)):
     if not user or not verify_password(body.password, user.hashed_password):
         raise HTTPException(
       status_code=status.HTTP_401_UNAUTHORIZED,
-      detail="Invalid email or password",
-      headers={"WWW-Authenticate": "Bearer"}      
+      detail="Invalid email or password"      
   )
+    
     token = create_access_token({"sub": str(user.id)})
     response = JSONResponse(content={"message": "Login successful"}, status_code=status.HTTP_200_OK)
-    response.set_cookie(
-        key="access_token",
-        value=token,
-        httponly=True,
-        secure=SECURE_COOKIE,
-        samesite="lax",
-        max_age=60 * 60 * 24
-    )
+    _set_auth_cookie(response, token)
     return response
 
 @router.post("/forgot-password", status_code=status.HTTP_200_OK)

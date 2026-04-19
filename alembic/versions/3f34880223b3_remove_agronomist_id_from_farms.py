@@ -19,7 +19,6 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:        
-    op.drop_constraint("farms_agronomist_id_fkey", "farms", type_="foreignkey")
     op.drop_column("farms", "agronomist_id")                                                                     
    
 def downgrade() -> None:                                                                       

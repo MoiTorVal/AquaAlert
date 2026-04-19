@@ -16,10 +16,9 @@ class FarmBase(BaseModel):
     wilting_point_pct: Optional[float] = None
 
 class FarmUpdate(FarmBase):
-    pass
+    name: Optional[str] = None
 class FarmCreate(FarmBase):
-    user_id: int
-
+    pass
 class FarmResponse(FarmBase):
     id: int
     user_id: int
