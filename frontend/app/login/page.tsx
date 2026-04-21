@@ -4,6 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import Input from "../components/Input";
 import Spinner from "../components/Spinner";
+import { login } from "../lib/api";
+import { useRouter } from "next/navigation";
 
 interface FormFields {
   email: string;
@@ -31,13 +33,14 @@ function validate(fields: FormFields): FormErrors {
 }
 
 export default function LoginPage() {
+  const router = useRouter();
   const [fields, setFields] = useState<FormFields>({
     email: "",
     password: "",
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [loading, setLoading] = useState(false);
-
+  const [serverError, setServerError] = useState<string | null>(null);
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) {
@@ -54,8 +57,17 @@ export default function LoginPage() {
       return;
     }
     setLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setLoading(false);
+    setServerError(null);
+    try {
+      const { user } = await login(fields);
+      router.push("/dashboard");
+    } catch (error) {
+      setServerError(
+        error instanceof Error ? error.message : "An error occurred",
+      );
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -69,9 +81,7 @@ export default function LoginPage() {
             >
               WaterStress
             </Link>
-            <p className="text-muted text-sm mt-1">
-              Sign in to your account
-            </p>
+            <p className="text-muted text-sm mt-1">Sign in to your account</p>
           </div>
 
           <form
@@ -107,6 +117,9 @@ rounded-lg transition-colors mt-2"
             >
               {loading ? <Spinner /> : "Log In"}
             </button>
+            {serverError && (
+              <p className="text-red-500 text-sm mt-2">{serverError}</p>
+            )}
           </form>
 
           <div className="text-center mt-6">

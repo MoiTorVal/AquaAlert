@@ -4,6 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import Input from "../components/Input";
 import Spinner from "../components/Spinner";
+import { signup } from "../lib/api";
+import { useRouter } from "next/navigation";
 
 interface FormFields {
   name: string;
@@ -41,6 +43,7 @@ function validate(fields: FormFields): FormErrors {
 }
 
 export default function SignupPage() {
+  const router = useRouter();
   const [fields, setFields] = useState<FormFields>({
     name: "",
     email: "",
@@ -49,6 +52,7 @@ export default function SignupPage() {
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [loading, setLoading] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
 
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
@@ -66,8 +70,17 @@ export default function SignupPage() {
       return;
     }
     setLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setLoading(false);
+    setServerError(null);
+    try {
+      const { user } = await signup(fields);
+      router.push("/dashboard");
+    } catch (error) {
+      setServerError(
+        error instanceof Error ? error.message : "An error occurred",
+      );
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -136,6 +149,9 @@ export default function SignupPage() {
             >
               {loading ? <Spinner /> : "Create Account"}
             </button>
+            {serverError && (
+              <p className="text-red-500 text-sm mt-2">{serverError}</p>
+            )}
           </form>
         </div>
 

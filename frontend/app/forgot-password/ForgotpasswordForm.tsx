@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Input from "../components/Input";
 import Spinner from "../components/Spinner";
+import { forgotPassword } from "../lib/api";
 
 export default function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
@@ -21,9 +22,15 @@ export default function ForgotPasswordForm() {
       return;
     }
     setLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setLoading(false);
-    setSubmitted(true);
+    setError("");
+    try {
+      await forgotPassword({ email });
+      setSubmitted(true);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "An error occurred");
+    } finally {
+      setLoading(false);
+    }
   }
 
   if (submitted) {
