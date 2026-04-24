@@ -1,27 +1,16 @@
-interface InputProps {
+interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label: string;
-  name: string;
-  value: string;
-  onChange: (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-  ) => void;
-  placeholder?: string;
-  type?: string;
   error?: string;
-  multiline?: boolean;
-  rows?: number;
+  ref?: React.Ref<HTMLInputElement>;
 }
 
 export default function Input({
   label,
   name,
-  value,
-  onChange,
-  placeholder,
-  type = "text",
   error,
-  multiline = false,
-  rows = 3,
+  type = "text",
+  ref,
+  ...rest
 }: InputProps) {
   const sharedClass =
     "bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-surface placeholder:text-muted focus:outline-none focus:border-white/30 transition-colors";
@@ -31,29 +20,15 @@ export default function Input({
       <label htmlFor={name} className="text-muted text-sm font-medium">
         {label}
       </label>
-      {multiline ? (
-        <textarea
-          id={name}
-          aria-describedby={error ? `${name}-error` : undefined}
-          name={name}
-          value={value}
-          onChange={onChange}
-          placeholder={placeholder}
-          rows={rows}
-          className={`${sharedClass} resize-none`}
-        />
-      ) : (
-        <input
-          id={name}
-          aria-describedby={error ? `${name}-error` : undefined}
-          name={name}
-          type={type}
-          value={value}
-          onChange={onChange}
-          placeholder={placeholder}
-          className={sharedClass}
-        />
-      )}
+      <input
+        id={name}
+        name={name}
+        type={type}
+        aria-describedby={error ? `${name}-error` : undefined}
+        className={sharedClass}
+        ref={ref}
+        {...rest}
+      />
       {error && (
         <p id={`${name}-error`} className="text-red-400 text-xs">
           {error}

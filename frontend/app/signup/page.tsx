@@ -2,84 +2,39 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import Input from "../components/Input";
 import Spinner from "../components/Spinner";
 import { signup } from "../lib/api";
-import { useRouter } from "next/navigation";
-
-interface FormFields {
-  name: string;
-  email: string;
-  password: string;
-  confirmPassword: string;
-}
-
-interface FormErrors {
-  name?: string;
-  email?: string;
-  password?: string;
-  confirmPassword?: string;
-}
-
-function validate(fields: FormFields): FormErrors {
-  const errors: FormErrors = {};
-  if (!fields.name.trim()) errors.name = "Name is required";
-  if (!fields.email.trim()) {
-    errors.email = "Email is required";
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fields.email)) {
-    errors.email = "Invalid email format";
-  }
-  if (!fields.password.trim()) {
-    errors.password = "Password is required";
-  } else if (fields.password.length < 6) {
-    errors.password = "Password must be at least 6 characters";
-  }
-  if (!fields.confirmPassword.trim()) {
-    errors.confirmPassword = "Please confirm your password";
-  } else if (fields.password !== fields.confirmPassword) {
-    errors.confirmPassword = "Passwords do not match";
-  }
-  return errors;
-}
+import { SignupFormSchema, type SignupFormValues } from "../lib/validators";
 
 export default function SignupPage() {
   const router = useRouter();
-  const [fields, setFields] = useState<FormFields>({
-    name: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-  });
-  const [errors, setErrors] = useState<FormErrors>({});
-  const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
 
-  function handleChange(
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-  ) {
-    const { name, value } = e.target;
-    setFields((prev) => ({ ...prev, [name]: value }));
-    setErrors((prev) => ({ ...prev, [name]: undefined }));
-  }
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<SignupFormValues>({
+    resolver: zodResolver(SignupFormSchema),
+  });
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const validationErrors = validate(fields);
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
-      return;
-    }
-    setLoading(true);
+  async function onValid(values: SignupFormValues) {
     setServerError(null);
     try {
-      const { user } = await signup(fields);
+      await signup({
+        name: values.name,
+        email: values.email,
+        password: values.password,
+      });
       router.push("/dashboard");
     } catch (error) {
       setServerError(
         error instanceof Error ? error.message : "An error occurred",
       );
-    } finally {
-      setLoading(false);
     }
   }
 
@@ -98,56 +53,44 @@ export default function SignupPage() {
           </div>
 
           <form
-            onSubmit={handleSubmit}
+            onSubmit={handleSubmit(onValid)}
             noValidate
             className="flex flex-col gap-5"
           >
             <Input
               label="Name"
-              name="name"
-              value={fields.name}
-              onChange={handleChange}
               placeholder="John Smith"
-              error={errors.name}
+              error={errors.name?.message}
+              {...register("name")}
             />
-
             <Input
               label="Email"
-              name="email"
               type="email"
-              value={fields.email}
-              onChange={handleChange}
               placeholder="you@example.com"
-              error={errors.email}
+              error={errors.email?.message}
+              {...register("email")}
             />
-
             <Input
               label="Password"
-              name="password"
               type="password"
-              value={fields.password}
-              onChange={handleChange}
               placeholder="••••••••"
-              error={errors.password}
+              error={errors.password?.message}
+              {...register("password")}
             />
-
             <Input
               label="Confirm Password"
-              name="confirmPassword"
               type="password"
-              value={fields.confirmPassword}
-              onChange={handleChange}
               placeholder="••••••••"
-              error={errors.confirmPassword}
+              error={errors.confirmPassword?.message}
+              {...register("confirmPassword")}
             />
 
             <button
               type="submit"
-              disabled={loading}
-              className="bg-btn-secondary hover:bg-white disabled:opacity-50 text-btn-text font-semibold py-3
-  rounded-lg transition-colors mt-2"
+              disabled={isSubmitting}
+              className="bg-btn-secondary hover:bg-white disabled:opacity-50 text-btn-text font-semibold py-3 rounded-lg transition-colors mt-2"
             >
-              {loading ? <Spinner /> : "Create Account"}
+              {isSubmitting ? <Spinner /> : "Create Account"}
             </button>
             {serverError && (
               <p className="text-red-500 text-sm mt-2">{serverError}</p>
