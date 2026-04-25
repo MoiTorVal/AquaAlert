@@ -7,12 +7,11 @@ from backend.schemas import (
     SignupRequest,
     LoginRequest,
     ForgotPasswordRequest,
+    UserResponse,
 )
 from backend.auth import hash_password, verify_password, create_access_token
 import logging
-import os
-
-SECURE_COOKIE = os.environ.get("SECURE_COOKIE", "true").lower() == "true"
+from backend.config import settings
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -23,7 +22,7 @@ def _set_auth_cookie(response: JSONResponse, token: str):
         key="access_token",
         value=token,
         httponly=True,
-        secure=SECURE_COOKIE,
+        secure=settings.secure_cookie,
         samesite="lax",
         max_age=60 * 60 * 24
     )
@@ -47,7 +46,9 @@ def signup(body: SignupRequest, db: Session = Depends(get_db)):
     db.refresh(user)
 
     token = create_access_token({"sub": str(user.id)})
-    response = JSONResponse(content={"message": "Account created"}, status_code=status.HTTP_201_CREATED)
+    response = JSONResponse(content={"message": "Account created", 
+                                     "user": UserResponse.model_validate(user).model_dump()},
+                            status_code=status.HTTP_201_CREATED)
     _set_auth_cookie(response, token)
     
     return response
@@ -62,7 +63,9 @@ def login(body: LoginRequest, db: Session = Depends(get_db)):
   )
     
     token = create_access_token({"sub": str(user.id)})
-    response = JSONResponse(content={"message": "Login successful"}, status_code=status.HTTP_200_OK)
+    response = JSONResponse(content={"message": "Login successful", 
+                                     "user": UserResponse.model_validate(user).model_dump()},
+                            status_code=status.HTTP_200_OK)
     _set_auth_cookie(response, token)
     return response
 

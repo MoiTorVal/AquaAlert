@@ -3,21 +3,16 @@ from datetime import datetime
 from backend.database import SessionLocal
 from backend.crud import create_weather_reading
 from backend.schemas import WeatherReadingCreate
+from backend.config import settings
 import requests
-import os
 import logging
 
 logger = logging.getLogger(__name__)
 
-load_dotenv()
-OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY")
-
-if not OPENWEATHER_API_KEY:
-    raise ValueError("OPENWEATHER_API_KEY not set in .env")
 
 def get_weather_data(location):
     try:
-        url = f"https://api.openweathermap.org/data/2.5/weather?q={location}&appid={OPENWEATHER_API_KEY}&units=metric"
+        url = f"https://api.openweathermap.org/data/2.5/weather?q={location}&appid={settings.openweather_api_key.get_secret_value()}&units=metric"
         response = requests.get(url, timeout=10)
         if response.status_code == 200:
             return response.json()
