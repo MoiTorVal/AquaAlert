@@ -5,7 +5,9 @@ from backend import models
 from sqlalchemy import text
 from contextlib import asynccontextmanager
 from backend.routers import farms, auth
+from backend.config import settings
 import logging
+
 
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -25,7 +27,7 @@ app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=settings.allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

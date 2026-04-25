@@ -2,15 +2,15 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, DeclarativeBase, Session
 from dotenv import load_dotenv
 from typing import Generator
-import os
+from backend.config import settings
 
 load_dotenv()
 
-DB_USER = os.getenv("DB_USER")
-DB_PASSWORD = os.getenv("DB_PASSWORD")
-DB_HOST = os.getenv("DB_HOST")
-DB_PORT = os.getenv("DB_PORT")
-DB_NAME = os.getenv("DB_NAME")
+DB_USER = settings.db_user
+DB_PASSWORD = settings.db_password.get_secret_value()
+DB_HOST = settings.db_host
+DB_PORT = settings.db_port
+DB_NAME = settings.db_name
 
 DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 

@@ -69,6 +69,93 @@ def farm(db, user):
     )
 
 
+# ── auth routes ──────────────────────────────────────────────────────────────
+
+
+def test_signup(unauthed_client):
+    response = unauthed_client.post("/auth/signup", json={
+        "name": "Alice",
+        "email": "alice@example.com",
+        "password": "secret123",
+    })
+    assert response.status_code == 201
+    data = response.json()
+    assert data["message"] == "Account created"
+    assert data["user"]["email"] == "alice@example.com"
+    assert data["user"]["name"] == "Alice"
+    assert "id" in data["user"]
+    assert "access_token" not in data
+
+
+def test_signup_duplicate_email(unauthed_client, user):
+    response = unauthed_client.post("/auth/signup", json={
+        "name": "Dupe",
+        "email": "test@example.com",
+        "password": "secret123",
+    })
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Email already registered"
+
+
+def test_login_success(db, unauthed_client):
+    from backend.auth import hash_password
+    from backend.models import User as UserModel
+    u = UserModel(email="login@example.com", hashed_password=hash_password("correctpass"), name="Login User")
+    db.add(u)
+    db.commit()
+
+    response = unauthed_client.post("/auth/login", json={
+        "email": "login@example.com",
+        "password": "correctpass",
+    })
+    assert response.status_code == 200
+    data = response.json()
+    assert data["message"] == "Login successful"
+    assert data["user"]["email"] == "login@example.com"
+    assert "id" in data["user"]
+    assert "access_token" not in data
+
+
+def test_login_wrong_password(db, unauthed_client):
+    from backend.auth import hash_password
+    from backend.models import User as UserModel
+    u = UserModel(email="wp@example.com", hashed_password=hash_password("correctpass"), name="WP User")
+    db.add(u)
+    db.commit()
+
+    response = unauthed_client.post("/auth/login", json={
+        "email": "wp@example.com",
+        "password": "wrongpassword",
+    })
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Invalid email or password"
+
+
+def test_login_unknown_email(unauthed_client):
+    response = unauthed_client.post("/auth/login", json={
+        "email": "nobody@example.com",
+        "password": "irrelevant",
+    })
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Invalid email or password"
+
+
+def test_forgot_password_registered_email(unauthed_client, user):
+    response = unauthed_client.post("/auth/forgot-password", json={
+        "email": "test@example.com",
+    })
+    assert response.status_code == 200
+    assert "reset link" in response.json()["message"]
+
+
+def test_forgot_password_unregistered_email(unauthed_client):
+    response = unauthed_client.post("/auth/forgot-password", json={
+        "email": "ghost@example.com",
+    })
+    assert response.status_code == 200
+    assert "reset link" in response.json()["message"]
+
+
 # ── farm routes ──────────────────────────────────────────────────────────────
 
 

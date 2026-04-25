@@ -7,3 +7,5 @@ data/
 node_modules/
 .coverage
 CLAUDE.md
+.env.local
+.claude
