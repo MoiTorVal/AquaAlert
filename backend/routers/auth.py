@@ -12,6 +12,7 @@ from backend.schemas import (
 from backend.auth import hash_password, verify_password, create_access_token
 import logging
 from backend.config import settings
+from backend.dependencies import get_current_user
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -75,3 +76,13 @@ def forgot_password(body: ForgotPasswordRequest, db: Session = Depends(get_db)):
     if user:
         logger.info("Password reset requested for %s", body.email)
     return {"message": "If that email is registered, you'll receive a password reset link shortly."}
+
+@router.post("/logout", status_code=status.HTTP_200_OK)
+def logout():
+    response = JSONResponse(content={"message": "Logged out"}, status_code=status.HTTP_200_OK)
+    response.delete_cookie(key="access_token", httponly=True, secure=settings.secure_cookie, samesite="lax")
+    return response
+
+@router.get("/me", response_model=UserResponse)
+def get_me(current_user: models.User = Depends(get_current_user)):
+    return current_user

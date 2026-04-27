@@ -103,3 +103,7 @@ export async function forgotPassword(
     body,
   });
 }
+
+export async function getMe(): Promise<User> {
+  return request(UserSchema, "/auth/me");
+}
