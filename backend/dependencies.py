@@ -28,15 +28,18 @@ def get_current_user(access_token: str | None = Cookie(default=None), db: Sessio
     user_id_str: str | None = payload.get("sub")
     if user_id_str is None:
         raise credentials_exception
-
+    
     try:
         user_id = int(user_id_str)
     except ValueError:
         raise credentials_exception
-
-    # 401 regardless of whether user never existed or was deleted — don't leak that distinction
+    
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if user is None:
+        raise credentials_exception
+    
+    iat = payload.get("iat")
+    if user.password_changed_at and iat and user.password_changed_at.timestamp() > iat:
         raise credentials_exception
 
     return user

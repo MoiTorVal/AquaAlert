@@ -8,11 +8,16 @@ from backend.schemas import (
     LoginRequest,
     ForgotPasswordRequest,
     UserResponse,
+    ResetPasswordRequest
 )
 from backend.auth import hash_password, verify_password, create_access_token
 import logging
 from backend.config import settings
 from backend.dependencies import get_current_user
+import secrets
+from datetime import datetime, timedelta, timezone
+import hashlib
+from backend.tests.test_crud import user
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -27,6 +32,9 @@ def _set_auth_cookie(response: JSONResponse, token: str):
         samesite="lax",
         max_age=60 * 60 * 24
     )
+
+def hash_token(token: str) -> str:
+    return hashlib.sha256(token.encode('utf-8')).hexdigest()
 
 @router.post("/signup", status_code=status.HTTP_201_CREATED)
 def signup(body: SignupRequest, db: Session = Depends(get_db)):
@@ -74,8 +82,41 @@ def login(body: LoginRequest, db: Session = Depends(get_db)):
 def forgot_password(body: ForgotPasswordRequest, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.email == body.email).first()
     if user:
-        logger.info("Password reset requested for %s", body.email)
-    return {"message": "If that email is registered, you'll receive a password reset link shortly."}
+        db.query(models.PasswordResetToken).filter(                                                                  
+          models.PasswordResetToken.user_id == user.id                                                             
+      ).delete()
+        token = secrets.token_urlsafe(32)
+        expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
+        reset_token = models.PasswordResetToken(
+            user_id=user.id,
+            token=hash_token(token),
+            expires_at=expires_at
+        )
+        db.add(reset_token)
+        db.commit()
+        logger.info("Password reset link: http://localhost:3000/reset-password?token=%s", token)
+    return {"message": "If an account with that email exists, a password reset link has been sent."}
+
+@router.post("/reset-password", status_code=status.HTTP_200_OK)
+def reset_password(body: ResetPasswordRequest, db: Session = Depends(get_db)):
+    reset_token = db.query(models.PasswordResetToken).filter(
+        models.PasswordResetToken.token == hash_token(body.token)
+    ).first()
+
+    now = datetime.now(timezone.utc).replace(tzinfo=None)  
+    if not reset_token or reset_token.expires_at < now:
+        raise HTTPException(status_code=400, detail="Invalid or expired token")
+
+    user = db.query(models.User).filter(models.User.id == reset_token.user_id).first()
+    if user is None:
+        raise HTTPException(status_code=400, detail="Invalid or expired token")
+
+    user.hashed_password = hash_password(body.new_password)
+    user.password_changed_at = now 
+    db.query(models.PasswordResetToken).filter_by(user_id=user.id).delete()
+    db.commit()
+
+    return {"message": "Password has been reset successfully"}
 
 @router.post("/logout", status_code=status.HTTP_200_OK)
 def logout():

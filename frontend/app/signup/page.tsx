@@ -98,7 +98,9 @@ export default function SignupPage() {
               {isSubmitting ? <Spinner /> : "Create Account"}
             </button>
             {serverError && (
-              <p role="alert" className="text-red-500 text-sm mt-2">{serverError}</p>
+              <p role="alert" className="text-red-500 text-sm mt-2">
+                {serverError}
+              </p>
             )}
           </form>
         </div>

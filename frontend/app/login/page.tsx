@@ -8,9 +8,12 @@ import Input from "../components/Input";
 import Spinner from "../components/Spinner";
 import { login } from "../lib/api";
 import { LoginFormSchema, type LoginFormValues } from "../lib/validators";
+import { useAuth } from "../context/AuthContext";
+import Link from "next/dist/client/link";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { setUser } = useAuth();
   const [serverError, setServerError] = useState<string | null>(null);
 
   const {
@@ -25,7 +28,8 @@ export default function LoginPage() {
   async function onValid(values: LoginFormValues) {
     setServerError(null);
     try {
-      await login(values);
+      const data = await login(values);
+      setUser(data.user);
       router.push("/dashboard");
     } catch (error) {
       setServerError(
@@ -67,8 +71,25 @@ export default function LoginPage() {
               {isSubmitting ? <Spinner /> : "Log In"}
             </button>
             {serverError && (
-              <p role="alert" className="text-red-500 text-sm mt-2">{serverError}</p>
+              <p role="alert" className="text-red-500 text-sm mt-2">
+                {serverError}
+              </p>
             )}
+            <div className="flex items-center justify-center gap-2 text-sm text-white/50">
+              <Link
+                href="/forgot-password"
+                className="hover:text-white transition-colors"
+              >
+                Forgot password?
+              </Link>
+              <span>·</span>
+              <Link
+                href="/signup"
+                className="hover:text-white transition-colors"
+              >
+                Don't have an account? Sign up
+              </Link>
+            </div>
           </form>
         </div>
       </div>

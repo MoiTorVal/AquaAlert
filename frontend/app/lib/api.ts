@@ -104,6 +104,22 @@ export async function forgotPassword(
   });
 }
 
+export async function resetPassword(body: {
+  token: string;
+  new_password: string;
+}): Promise<MessageResponse> {
+  return request(MessageResponseSchema, "/auth/reset-password", {
+    method: "POST",
+    body,
+  });
+}
+
+export async function logout(): Promise<MessageResponse> {
+  return request(MessageResponseSchema, "/auth/logout", {
+    method: "POST",
+  });
+}
+
 export async function getMe(): Promise<User> {
   return request(UserSchema, "/auth/me");
 }

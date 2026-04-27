@@ -17,7 +17,7 @@ class User(Base):
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     name: Mapped[str | None] = mapped_column(String(100))
     created_at: Mapped[datetime | None] = mapped_column(DateTime, default=default)
-
+    password_changed_at: Mapped[datetime | None] = mapped_column(DateTime, default=default)
 
 class WeatherReading(Base):
     __tablename__ = "weather_readings"
@@ -65,3 +65,11 @@ class SoilMoistureReading(Base):
     soil_moisture_pct: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
 
 
+class PasswordResetToken(Base):
+    __tablename__ = "password_reset_tokens"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
+    token: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=default)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)

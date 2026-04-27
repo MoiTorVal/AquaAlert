@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import Logo from "./Logo";
+import { useAuth } from "../context/AuthContext";
+import { logout } from "../lib/api";
 
 const navLink =
   "text-white/80 hover:text-white hover:bg-muted/20 px-3 py-1.5 rounded-lg transition-colors";
@@ -11,6 +13,8 @@ const mobileNavLink =
   "text-white/80 hover:text-white hover:bg-muted/20 px-3 py-2.5 rounded-lg transition-colors text-base";
 
 export default function Navbar() {
+  const { user, setUser } = useAuth();
+
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -40,23 +44,40 @@ export default function Navbar() {
 
         {/* Desktop nav */}
         <div className="hidden md:flex items-center gap-6 text-sm font-medium">
-          <Link href="/" className={navLink}>
-            Home
-          </Link>
-          <Link href="/contact" className={navLink}>
-            Contact
-          </Link>
-          <span className="w-px h-4 bg-white/20" />
-          <Link href="/login" className={navLink}>
-            Log In
-          </Link>
-          <Link
-            href="/signup"
-            className="bg-btn-secondary hover:bg-white text-btn-text font-semibold px-4 py-1.5 rounded-lg
-  transition-colors"
-          >
-            Sign up
-          </Link>
+          <div className="hidden md:flex items-center gap-6 text-sm font-medium">
+            <Link href="/" className={navLink}>
+              Home
+            </Link>
+            <Link href="/contact" className={navLink}>
+              Contact
+            </Link>
+            <span className="w-px h-4 bg-white/20" />
+            {user ? (
+              <button
+                className={navLink}
+                onClick={() =>
+                  logout()
+                    .then(() => setUser(null))
+                    .catch(() => setUser(null))
+                }
+              >
+                Log Out
+              </button>
+            ) : (
+              <>
+                <Link href="/login" className={navLink}>
+                  Log In
+                </Link>
+                <Link
+                  href="/signup"
+                  className="bg-btn-secondary hover:bg-white text-btn-text font-semibold px-4 py-1.5 
+  rounded-lg transition-colors"
+                >
+                  Sign up
+                </Link>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Hamburger button */}
@@ -105,21 +126,37 @@ export default function Navbar() {
           >
             Contact
           </Link>
-          <Link
-            href="/login"
-            className={mobileNavLink}
-            onClick={() => setMenuOpen(false)}
-          >
-            Log In
-          </Link>
-          <Link
-            href="/signup"
-            className="bg-btn-secondary hover:bg-white text-btn-text font-semibold px-4 py-2.5 rounded-lg
-  transition-colors text-center mt-2"
-            onClick={() => setMenuOpen(false)}
-          >
-            Sign up
-          </Link>
+          {user ? (
+            <button
+              className={mobileNavLink}
+              onClick={() => {
+                logout()
+                  .then(() => setUser(null))
+                  .catch(() => setUser(null));
+                setMenuOpen(false);
+              }}
+            >
+              Log Out
+            </button>
+          ) : (
+            <>
+              <Link
+                href="/login"
+                className={mobileNavLink}
+                onClick={() => setMenuOpen(false)}
+              >
+                Log In
+              </Link>
+              <Link
+                href="/signup"
+                className="bg-btn-secondary hover:bg-white text-btn-text font-semibold px-4 py-2.5 rounded-lg
+transition-colors text-center mt-2"
+                onClick={() => setMenuOpen(false)}
+              >
+                Sign up
+              </Link>
+            </>
+          )}
         </div>
       )}
     </nav>
