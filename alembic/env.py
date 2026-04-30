@@ -28,7 +28,10 @@ target_metadata = Base.metadata
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
-
+def include_object(object, name, type_, reflected, compare_to):
+      if type_ == "table" and reflected and compare_to is None:
+          return False      
+      return True
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
