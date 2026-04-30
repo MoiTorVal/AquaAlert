@@ -117,12 +117,11 @@ function FarmsSkeleton() {
 function EmptyState() {
   return (
     <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center text-center p-6">
-      <div className="text-5xl mb-4">🌱</div>
       <h2 className="text-xl font-semibold mb-2">No farms yet</h2>
       <p className="text-gray-400 mb-6">
         Add your first farm to start tracking water stress.
       </p>
-      <button className="bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700">
+      <button className="bg-gray-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-gray-700">
         + Create your first farm
       </button>
     </div>
