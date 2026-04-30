@@ -17,7 +17,7 @@ from backend.dependencies import get_current_user
 import secrets
 from datetime import datetime, timedelta, timezone
 import hashlib
-from backend.tests.test_crud import user
+
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

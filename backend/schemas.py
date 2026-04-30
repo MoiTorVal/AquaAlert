@@ -35,7 +35,7 @@ class WeatherReadingCreate(BaseModel):
     description: str
     rainfall_mm: float
     wind_speed_kph: float
-    et0_mm: Optional[float] = None
+    
 
 class WeatherReadingBody(BaseModel):
     recorded_at: datetime
@@ -45,7 +45,7 @@ class WeatherReadingBody(BaseModel):
     description: str
     rainfall_mm: float
     wind_speed_kph: float
-    et0_mm: Optional[float] = None
+    
 
 class WeatherReadingResponse(WeatherReadingCreate):
     id: int
@@ -56,34 +56,6 @@ class PaginatedWeatherResponse(BaseModel):
     skip: int
     limit: int
     results: list[WeatherReadingResponse]
-
-class SoilMoistureReadingCreate(BaseModel):
-    farm_id: int
-    recorded_at: datetime
-    soil_moisture_pct: float
-
-class SoilMoistureReadingBody(BaseModel):
-    recorded_at: datetime
-    soil_moisture_pct: float
-
-
-class SoilMoistureReadingResponse(SoilMoistureReadingCreate):
-    id: int
-    model_config = ConfigDict(from_attributes=True)
-
-class PaginatedSoilMoistureResponse(BaseModel):
-    total: int
-    skip: int
-    limit: int
-    results: list[SoilMoistureReadingResponse]
-
-class WaterStressResponse(BaseModel):
-    current_depletion_mm: float
-    paw_mm: float
-    raw_threshold_mm: float
-    stress_in_days: Optional[int]                  
-    warning: bool
-    severity: str
 
 class SignupRequest(BaseModel):
     email: EmailStr
