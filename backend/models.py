@@ -31,7 +31,6 @@ class WeatherReading(Base):
     humidity_pct: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
     rainfall_mm: Mapped[Decimal | None] = mapped_column(Numeric(8, 2))
     wind_speed_kph: Mapped[Decimal | None] = mapped_column(Numeric(6, 2))
-    et0_mm: Mapped[Decimal | None] = mapped_column(Numeric(8, 2))
 
     __table_args__ = (
         UniqueConstraint("farm_id", "recorded_at", name="uq_weather_farm_recorded"),
@@ -54,16 +53,6 @@ class Farm(Base):
     planting_date: Mapped[date | None] = mapped_column(Date)
     field_capacity_pct: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
     wilting_point_pct: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
-
-
-class SoilMoistureReading(Base):
-    __tablename__ = "soil_moisture_readings"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    farm_id: Mapped[int] = mapped_column(Integer, ForeignKey("farms.id"), nullable=False)
-    recorded_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    soil_moisture_pct: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
-
 
 class PasswordResetToken(Base):
     __tablename__ = "password_reset_tokens"

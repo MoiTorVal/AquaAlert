@@ -35,9 +35,28 @@ export const MessageResponseSchema = z.object({
   message: z.string(),
 });
 
+export const FarmSchema = z.object({
+  id: z.number(),
+  user_id: z.number(),
+  name: z.string(),
+  location: z.string().nullable(),
+  area_hectares: z.number().nullable(),
+  crop_type: z.string().nullable(),
+  soil_type: z.string().nullable(),
+  root_depth_cm: z.number().nullable(),
+  growth_stage: z.string().nullable(),
+  planting_date: z.string().nullable(),
+  field_capacity_pct: z.number().nullable(),
+  wilting_point_pct: z.number().nullable(),
+  created_at: z.string().nullable(),
+});
+
+export const FarmsListSchema = z.array(FarmSchema);
+
 export type User = z.infer<typeof UserSchema>;
 export type AuthResponse = z.infer<typeof AuthResponseSchema>;
 export type MessageResponse = z.infer<typeof MessageResponseSchema>;
+export type Farm = z.infer<typeof FarmSchema>;
 
 function formatDetail(detail: unknown, status: number): string {
   if (typeof detail === "string") return detail;
@@ -122,4 +141,8 @@ export async function logout(): Promise<MessageResponse> {
 
 export async function getMe(): Promise<User> {
   return request(UserSchema, "/auth/me");
+}
+
+export async function getFarms(): Promise<Farm[]> {
+  return request(FarmsListSchema, "/farms");
 }

@@ -6,7 +6,6 @@ from backend.schemas import (
     WeatherReadingBody, WeatherReadingCreate, WeatherReadingResponse, PaginatedWeatherResponse,
     SoilMoistureReadingBody, SoilMoistureReadingCreate, SoilMoistureReadingResponse, PaginatedSoilMoistureResponse, WaterStressResponse
 )
-from backend.services.water_balance import compute_water_balance
 from datetime import datetime, timezone, timedelta
 from backend.database import get_db
 from backend.dependencies import get_current_user
@@ -94,18 +93,6 @@ def read_soil_moisture_reading(farm_id: int, reading_id: int, db: Session = Depe
     if db_reading is None:
         raise HTTPException(status_code=404, detail="Soil moisture reading not found")
     return db_reading
-
-@router.post("/{farm_id}/weather", response_model=WeatherReadingResponse)
-def create_weather_reading(farm_id: int, body: WeatherReadingBody, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    _validate_farm_ownership(db=db, farm_id=farm_id, user_id=current_user.id)
-    weather_reading = WeatherReadingCreate(farm_id=farm_id, **body.model_dump())
-    return crud.create_weather_reading(db=db, weather_reading=weather_reading)
-
-@router.post("/{farm_id}/soil-moisture", response_model=SoilMoistureReadingResponse)
-def create_soil_moisture_reading(farm_id: int, body: SoilMoistureReadingBody, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    _validate_farm_ownership(db=db, farm_id=farm_id, user_id=current_user.id)
-    soil_moisture_reading = SoilMoistureReadingCreate(farm_id=farm_id, **body.model_dump())
-    return crud.create_soil_moisture_reading(db=db, soil_moisture_reading=soil_moisture_reading)
 
 
 @router.get("/{farm_id}/water-stress", response_model=WaterStressResponse)
