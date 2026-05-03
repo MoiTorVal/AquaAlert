@@ -61,7 +61,7 @@ def test_signup(client):
 def test_signup_duplicate_email(client, existing_user):
     response = client.post("/auth/signup", json={
         "email": "existing@example.com",
-        "password": "anypass",
+        "password": "anypass1",
         "name": "Duplicate",
     })
     assert response.status_code == 400

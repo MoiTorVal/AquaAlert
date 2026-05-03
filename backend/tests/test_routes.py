@@ -1,72 +1,7 @@
 import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.pool import StaticPool
-from sqlalchemy.orm import sessionmaker
-
-from backend.main import app
-from backend.database import get_db
-from backend.models import Base, User
-from backend.auth import create_access_token
+from backend.models import User
 from backend import crud
 from backend.schemas import FarmCreate
-
-
-# ── test database setup ──────────────────────────────────────────────────────
-
-
-@pytest.fixture
-def db():
-    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False}, poolclass=StaticPool)
-    Base.metadata.create_all(engine)
-    Session = sessionmaker(bind=engine)
-    session = Session()
-    yield session
-    session.close()
-    Base.metadata.drop_all(engine)
-    engine.dispose()
-
-
-@pytest.fixture
-def user(db):
-    u = User(email="test@example.com", hashed_password="dummy", name="Test User")
-    db.add(u)
-    db.commit()
-    db.refresh(u)
-    return u
-
-
-@pytest.fixture
-def client(db, user):
-    app.dependency_overrides[get_db] = lambda: db
-    token = create_access_token({"sub": str(user.id)})
-    c = TestClient(app)
-    c.cookies.set("access_token", token)
-    yield c
-    app.dependency_overrides.clear()
-
-
-@pytest.fixture
-def unauthed_client(db):
-    app.dependency_overrides[get_db] = lambda: db
-    yield TestClient(app)
-    app.dependency_overrides.clear()
-
-
-@pytest.fixture
-def farm(db, user):
-    return crud.create_farm(
-        db,
-        FarmCreate(
-            name="Test Farm",
-            location="Test Location",
-            crop_type="tomato",
-            field_capacity_pct=30,
-            wilting_point_pct=15,
-            root_depth_cm=60,
-        ),
-        user_id=user.id,
-    )
 
 
 # ── auth routes ──────────────────────────────────────────────────────────────

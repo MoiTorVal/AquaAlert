@@ -1,51 +1,8 @@
 import pytest
 from datetime import datetime, timezone, timedelta
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-
-from backend.models import Base, User
+from backend.models import User
 from backend import crud
 from backend.schemas import FarmCreate, WeatherReadingCreate
-
-
-# ── fixtures ─────────────────────────────────────────────────────────────────
-
-
-@pytest.fixture
-def db():
-    engine = create_engine("sqlite:///:memory:")
-    Base.metadata.create_all(engine)
-    Session = sessionmaker(bind=engine)
-    session = Session()
-    yield session
-    session.close()
-    Base.metadata.drop_all(engine)
-    engine.dispose()
-
-
-@pytest.fixture
-def user(db):
-    u = User(email="test@example.com", hashed_password="dummy-hashed-pw", name="Test User")
-    db.add(u)
-    db.commit()
-    db.refresh(u)
-    return u
-
-
-@pytest.fixture
-def farm(db, user):
-    return crud.create_farm(
-        db,
-        FarmCreate(
-            name="Test Farm",
-            location="Test Location",
-            crop_type="tomato",
-            field_capacity_pct=30,
-            wilting_point_pct=15,
-            root_depth_cm=60,
-        ),
-        user_id=user.id,
-    )
 
 
 # ── farm CRUD ────────────────────────────────────────────────────────────────
