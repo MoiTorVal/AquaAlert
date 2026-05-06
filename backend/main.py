@@ -1,7 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from backend.database import engine, Base
-from backend import models
+from backend.database import engine
 from sqlalchemy import text
 from contextlib import asynccontextmanager
 from backend.routers import farms, auth
