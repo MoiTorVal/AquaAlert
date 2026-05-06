@@ -1,49 +1,46 @@
 from backend import models
 from backend.schemas import FarmCreate, FarmUpdate, WeatherReadingCreate
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, Query
 from datetime import datetime
 
+
 # CRUD operations for farms
-def create_farm(db: Session, farm: FarmCreate, user_id: int):
+def create_farm(db: Session, farm: FarmCreate, user_id: int) -> models.Farm:
     db_farm = models.Farm(**farm.model_dump(), user_id=user_id)
     db.add(db_farm)
     db.commit()
     db.refresh(db_farm)
     return db_farm
 
-def get_farm(db: Session, farm_id: int):
+def get_farm(db: Session, farm_id: int) -> models.Farm | None:
     return db.query(models.Farm).filter(models.Farm.id == farm_id).first()
 
-def get_farms(db: Session, user_id: int, skip: int = 0, limit: int = 10):
+def get_farms(db: Session, user_id: int, skip: int = 0, limit: int = 10) -> list[models.Farm]:
     return db.query(models.Farm).filter(models.Farm.user_id == user_id).offset(skip).limit(limit).all()
 
-def delete_farm(db: Session, farm_id: int):
-    db_farm = db.query(models.Farm).filter(models.Farm.id == farm_id).first()
-    if db_farm:
-        db.delete(db_farm)
-        db.commit()
-    return db_farm
+def delete_farm(db: Session, farm: models.Farm) -> models.Farm:
+    db.delete(farm)
+    db.commit()
+    return farm
 
-def update_farm(db: Session, farm_id: int, farm_update: FarmUpdate):
-    db_farm = db.query(models.Farm).filter(models.Farm.id == farm_id).first()
-    if db_farm:
-        for key, value in farm_update.model_dump(exclude_unset=True).items():
-            setattr(db_farm, key, value)
-        db.commit()
-        db.refresh(db_farm)
-    return db_farm
+def update_farm(db: Session, farm: models.Farm, farm_update: FarmUpdate) -> models.Farm:
+    for key, value in farm_update.model_dump(exclude_unset=True).items():
+        setattr(farm, key, value)
+    db.commit()
+    db.refresh(farm)
+    return farm
 
-def create_weather_reading(db: Session, weather_reading: WeatherReadingCreate):
+def create_weather_reading(db: Session, weather_reading: WeatherReadingCreate) -> models.WeatherReading:
     db_weather_reading = models.WeatherReading(**weather_reading.model_dump())
     db.add(db_weather_reading)
     db.commit()
     db.refresh(db_weather_reading)
     return db_weather_reading
 
-def get_weather_reading(db: Session, weather_reading_id: int):
+def get_weather_reading(db: Session, weather_reading_id: int) -> models.WeatherReading | None:
     return db.query(models.WeatherReading).filter(models.WeatherReading.id == weather_reading_id).first()
 
-def _weather_readings_base_query(db: Session, farm_id: int, start_date: datetime | None, end_date: datetime | None):
+def _weather_readings_base_query(db: Session, farm_id: int, start_date: datetime | None, end_date: datetime | None) -> Query:
     query = db.query(models.WeatherReading).filter(models.WeatherReading.farm_id == farm_id)
     if start_date:
         query = query.filter(models.WeatherReading.recorded_at >= start_date)

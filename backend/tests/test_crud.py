@@ -49,14 +49,9 @@ def test_get_farms_only_returns_own_user(db):
 
 
 def test_delete_farm(db, farm):
-    deleted = crud.delete_farm(db, farm.id)
+    deleted = crud.delete_farm(db, farm)
     assert deleted.id == farm.id
     assert crud.get_farm(db, farm.id) is None
-
-
-def test_delete_farm_not_found(db):
-    result = crud.delete_farm(db, 9999)
-    assert result is None
 
 
 # ── weather reading CRUD ─────────────────────────────────────────────────────
@@ -143,22 +138,16 @@ def test_count_weather_readings_date_filter(db, farm):
 
 def test_update_farm(db, farm):
     from backend.schemas import FarmUpdate
-    updated = crud.update_farm(db, farm.id, FarmUpdate(name="Updated Farm"))
+    updated = crud.update_farm(db, farm, FarmUpdate(name="Updated Farm"))
     assert updated.name == "Updated Farm"
     assert updated.crop_type == "tomato"
 
 
 def test_update_farm_only_changes_provided_fields(db, farm):
     from backend.schemas import FarmUpdate
-    updated = crud.update_farm(db, farm.id, FarmUpdate(crop_type="corn"))
+    updated = crud.update_farm(db, farm, FarmUpdate(crop_type="corn"))
     assert updated.crop_type == "corn"
     assert updated.name == "Test Farm"
-
-
-def test_update_farm_not_found(db):
-    from backend.schemas import FarmUpdate
-    result = crud.update_farm(db, 9999, FarmUpdate(name="Ghost"))
-    assert result is None
 
 
 def test_get_farms_pagination(db, user):

@@ -97,7 +97,7 @@ def test_get_weather_data_success():
     mock_response = MagicMock()
     mock_response.status_code = 200
     mock_response.json.return_value = {"name": "Fresno", "dt": 1700000000}
-    with patch("backend.services.weather_service.requests.get", return_value=mock_response):
+    with patch("backend.services.weather_service.httpx.get", return_value=mock_response):
         result = get_weather_data("Fresno")
     assert result == {"name": "Fresno", "dt": 1700000000}
 
@@ -105,16 +105,16 @@ def test_get_weather_data_success():
 def test_get_weather_data_non_200_returns_none():
     mock_response = MagicMock()
     mock_response.status_code = 404
-    with patch("backend.services.weather_service.requests.get", return_value=mock_response):
+    with patch("backend.services.weather_service.httpx.get", return_value=mock_response):
         result = get_weather_data("Unknown City")
     assert result is None
 
 
 def test_get_weather_data_request_exception_returns_none():
-    import requests as req_module
+    import httpx
     with patch(
-        "backend.services.weather_service.requests.get",
-        side_effect=req_module.exceptions.RequestException("timeout"),
+        "backend.services.weather_service.httpx.get",
+        side_effect=httpx.RequestError("timeout"),
     ):
         result = get_weather_data("Fresno")
     assert result is None

@@ -5,7 +5,7 @@ from backend.schemas import (
     FarmCreate, FarmUpdate, FarmResponse,
     WeatherReadingResponse, PaginatedWeatherResponse 
 )
-from datetime import datetime, timezone, timedelta
+from datetime import datetime
 from backend.database import get_db
 from backend.dependencies import get_current_user
 from backend.models import User
@@ -35,12 +35,12 @@ def read_farms(skip: int = 0, limit: int = 10, db: Session = Depends(get_db), cu
 @router.delete("/{farm_id}", response_model=FarmResponse)
 def delete_farm(farm_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     db_farm = _validate_farm_ownership(db=db, farm_id=farm_id, user_id=current_user.id)
-    return crud.delete_farm(db=db, farm_id=farm_id)
+    return crud.delete_farm(db=db, farm=db_farm)
 
 @router.put("/{farm_id}", response_model=FarmResponse)
 def update_farm(farm_id: int, farm_update: FarmUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     db_farm = _validate_farm_ownership(db=db, farm_id=farm_id, user_id=current_user.id)
-    return crud.update_farm(db=db, farm_id=farm_id, farm_update=farm_update)
+    return crud.update_farm(db=db, farm=db_farm, farm_update=farm_update)
 
 
 @router.get("/{farm_id}/weather", response_model=PaginatedWeatherResponse)
