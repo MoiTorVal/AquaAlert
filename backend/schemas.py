@@ -18,7 +18,7 @@ class FarmBase(BaseModel):
     soil_type: Optional[SoilTexture] = None
     harvest_date: Optional[date] = None
     field_polygon: Optional[str] = None
-
+    
 class FarmUpdate(FarmBase):
     name: Optional[str] = None
 class FarmCreate(FarmBase):

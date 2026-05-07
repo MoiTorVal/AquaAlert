@@ -53,6 +53,11 @@ class Farm(Base):
     wilting_point_pct: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
     field_polygon: Mapped[str | None] = mapped_column(Geometry("POLYGON", srid=4326), nullable=True)
     harvest_date: Mapped[date | None] = mapped_column(Date)
+    acreage_acres: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
+    pump_hp: Mapped[Decimal | None] = mapped_column(Numeric(6, 2))
+    pump_lift_ft: Mapped[Decimal | None] = mapped_column(Numeric(6, 2))
+    water_source: Mapped[str | None] = mapped_column(String(100))
+
 
 class PasswordResetToken(Base):
     __tablename__ = "password_reset_tokens"
