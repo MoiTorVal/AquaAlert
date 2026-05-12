@@ -18,3 +18,20 @@ class StressSeverity(str, enum.Enum):
     GREEN = "green"
     YELLOW = "yellow"
     RED = "red"
+
+class WaterSource(str, enum.Enum):
+    WELL = "well"
+    CANAL = "canal"
+    SURFACE = "surface"
+
+class Locale(str, enum.Enum):
+    EN = "en"
+    ES = "es"
+
+class Tier(str, enum.Enum):
+    FREE = "free"
+    PAID = "paid"
+
+class IrrigationSource(str, enum.Enum):
+    USER_LOG = "user_log"
+    ESTIMATED = "estimated"

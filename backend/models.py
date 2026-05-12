@@ -1,11 +1,15 @@
 from decimal import Decimal
 from datetime import datetime, date
 
-from sqlalchemy import String, Integer, Numeric, DateTime, Date, ForeignKey, UniqueConstraint, Enum as SAEnum, func
+from sqlalchemy import String, Integer, Numeric, DateTime, Date, Boolean, ForeignKey, UniqueConstraint, Enum as SAEnum, func
 from sqlalchemy.orm import Mapped, mapped_column
 from backend.database import Base
 from geoalchemy2 import Geometry
-from backend.enums import SoilTexture, StressSeverity
+from backend.enums import SoilTexture, StressSeverity, WaterSource, Locale, Tier, IrrigationSource
+
+
+def _enum_values(enum_cls):
+    return [e.value for e in enum_cls]
 
 
 class User(Base):
@@ -17,6 +21,18 @@ class User(Base):
     name: Mapped[str | None] = mapped_column(String(100))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     password_changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    locale: Mapped[Locale] = mapped_column(
+        SAEnum(Locale, name="locale", values_callable=_enum_values),
+        nullable=False,
+        server_default=Locale.EN.value,
+    )
+    is_socially_disadvantaged: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    is_beginning_farmer: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    tier: Mapped[Tier] = mapped_column(
+        SAEnum(Tier, name="tier", values_callable=_enum_values),
+        nullable=False,
+        server_default=Tier.FREE.value,
+    )
 
 class WeatherReading(Base):
     __tablename__ = "weather_readings"
@@ -56,7 +72,7 @@ class Farm(Base):
     acreage_acres: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
     pump_hp: Mapped[Decimal | None] = mapped_column(Numeric(6, 2))
     pump_lift_ft: Mapped[Decimal | None] = mapped_column(Numeric(6, 2))
-    water_source: Mapped[str | None] = mapped_column(String(100))
+    water_source: Mapped[WaterSource | None] = mapped_column(SAEnum(WaterSource, name="watersource"))
 
 
 class PasswordResetToken(Base):
@@ -99,4 +115,52 @@ class AquaCropOutput(Base):
 
     __table_args__ = (
         UniqueConstraint("farm_id", "as_of_date", name="uq_aquacrop_farm_date"),
+    )
+
+
+class BaselineIrrigation(Base):
+    __tablename__ = "baseline_irrigations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    farm_id: Mapped[int] = mapped_column(Integer, ForeignKey("farms.id"), nullable=False)
+    season_year: Mapped[int] = mapped_column(Integer, nullable=False)
+    gallons_per_week_estimate: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
+    schedule_notes: Mapped[str | None] = mapped_column(String(500))
+    captured_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("farm_id", "season_year", name="uq_baseline_farm_season"),
+    )
+
+
+class IrrigationEvent(Base):
+    __tablename__ = "irrigation_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    farm_id: Mapped[int] = mapped_column(Integer, ForeignKey("farms.id"), nullable=False)
+    event_date: Mapped[date] = mapped_column(Date, nullable=False)
+    gallons_applied: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
+    source: Mapped[IrrigationSource] = mapped_column(
+        SAEnum(IrrigationSource, name="irrigationsource", values_callable=_enum_values),
+        nullable=False,
+    )
+    logged_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class WaterSavings(Base):
+    __tablename__ = "water_savings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    farm_id: Mapped[int] = mapped_column(Integer, ForeignKey("farms.id"), nullable=False)
+    period_start: Mapped[date] = mapped_column(Date, nullable=False)
+    period_end: Mapped[date] = mapped_column(Date, nullable=False)
+    baseline_gallons: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    actual_gallons: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    gallons_saved: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    kwh_saved: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    co2_kg_saved: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    computed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("farm_id", "period_start", "period_end", name="uq_water_savings_farm_period"),
     )

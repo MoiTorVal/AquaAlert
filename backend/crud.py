@@ -1,7 +1,7 @@
 from backend import models
-from backend.schemas import FarmCreate, FarmUpdate, WeatherReadingCreate
+from backend.schemas import FarmCreate, FarmUpdate, WeatherReadingCreate, IrrigationEventCreate
 from sqlalchemy.orm import Session, Query
-from datetime import datetime
+from datetime import datetime, date
 
 
 # CRUD operations for farms
@@ -72,5 +72,83 @@ def count_weather_readings_by_farm(
     end_date: datetime | None = None,
 ) -> int:
     return _weather_readings_base_query(db, farm_id, start_date, end_date).count()
+
+
+def create_irrigation_event(db: Session, farm_id: int, event: IrrigationEventCreate) -> models.IrrigationEvent:
+    db_event = models.IrrigationEvent(**event.model_dump(), farm_id=farm_id)
+    db.add(db_event)
+    db.commit()
+    db.refresh(db_event)
+    return db_event
+
+
+def _irrigation_events_base_query(db: Session, farm_id: int, start_date: date | None, end_date: date | None) -> Query:
+    query = db.query(models.IrrigationEvent).filter(models.IrrigationEvent.farm_id == farm_id)
+    if start_date:
+        query = query.filter(models.IrrigationEvent.event_date >= start_date)
+    if end_date:
+        query = query.filter(models.IrrigationEvent.event_date <= end_date)
+    return query
+
+
+def get_irrigation_events_by_farm(
+    db: Session,
+    farm_id: int,
+    skip: int = 0,
+    limit: int = 10,
+    start_date: date | None = None,
+    end_date: date | None = None,
+) -> list[models.IrrigationEvent]:
+    return (
+        _irrigation_events_base_query(db, farm_id, start_date, end_date)
+        .order_by(models.IrrigationEvent.event_date.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+
+
+def count_irrigation_events_by_farm(
+    db: Session,
+    farm_id: int,
+    start_date: date | None = None,
+    end_date: date | None = None,
+) -> int:
+    return _irrigation_events_base_query(db, farm_id, start_date, end_date).count()
+
+
+def _water_savings_base_query(db: Session, farm_id: int, start_date: date | None, end_date: date | None) -> Query:
+    query = db.query(models.WaterSavings).filter(models.WaterSavings.farm_id == farm_id)
+    if start_date:
+        query = query.filter(models.WaterSavings.period_end >= start_date)
+    if end_date:
+        query = query.filter(models.WaterSavings.period_start <= end_date)
+    return query
+
+
+def get_water_savings_by_farm(
+    db: Session,
+    farm_id: int,
+    skip: int = 0,
+    limit: int = 10,
+    start_date: date | None = None,
+    end_date: date | None = None,
+) -> list[models.WaterSavings]:
+    return (
+        _water_savings_base_query(db, farm_id, start_date, end_date)
+        .order_by(models.WaterSavings.period_start.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+
+
+def count_water_savings_by_farm(
+    db: Session,
+    farm_id: int,
+    start_date: date | None = None,
+    end_date: date | None = None,
+) -> int:
+    return _water_savings_base_query(db, farm_id, start_date, end_date).count()
 
 

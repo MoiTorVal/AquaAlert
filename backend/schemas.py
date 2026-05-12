@@ -3,7 +3,7 @@ from decimal import Decimal
 from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
 from typing import Optional
 from datetime import datetime, date
-from backend.enums import SoilTexture, StressSeverity
+from backend.enums import SoilTexture, StressSeverity, WaterSource, Locale, Tier, IrrigationSource
 
 class FarmBase(BaseModel):
     name: str
@@ -18,7 +18,11 @@ class FarmBase(BaseModel):
     soil_type: Optional[SoilTexture] = None
     harvest_date: Optional[date] = None
     field_polygon: Optional[str] = None
-    
+    water_source: Optional[WaterSource] = None
+    pump_hp: Optional[float] = None
+    pump_lift_ft: Optional[float] = None
+    acreage_acres: Optional[float] = None
+
 class FarmUpdate(FarmBase):
     name: Optional[str] = None
 class FarmCreate(FarmBase):
@@ -87,6 +91,10 @@ class UserResponse(BaseModel):
     id: int
     email: str
     name: str | None
+    locale: Locale
+    tier: Tier
+    is_socially_disadvantaged: Optional[bool] = None
+    is_beginning_farmer: Optional[bool] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -113,6 +121,52 @@ class AquaCropOutputRead(AquaCropOutputBase):
     id: int
     farm_id: int
     run_date: Optional[datetime] = None
-    
+
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class IrrigationEventCreate(BaseModel):
+    event_date: date
+    gallons_applied: Decimal
+    source: IrrigationSource = IrrigationSource.USER_LOG
+
+
+class IrrigationEventResponse(BaseModel):
+    id: int
+    farm_id: int
+    event_date: date
+    gallons_applied: Decimal
+    source: IrrigationSource
+    logged_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PaginatedIrrigationEventResponse(BaseModel):
+    total: int
+    skip: int
+    limit: int
+    results: list[IrrigationEventResponse]
+
+
+class WaterSavingsResponse(BaseModel):
+    id: int
+    farm_id: int
+    period_start: date
+    period_end: date
+    baseline_gallons: Decimal
+    actual_gallons: Decimal
+    gallons_saved: Decimal
+    kwh_saved: Decimal
+    co2_kg_saved: Decimal
+    computed_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PaginatedWaterSavingsResponse(BaseModel):
+    total: int
+    skip: int
+    limit: int
+    results: list[WaterSavingsResponse]
