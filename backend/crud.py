@@ -1,5 +1,6 @@
 from backend import models
 from backend.schemas import FarmCreate, FarmUpdate, WeatherReadingCreate, IrrigationEventCreate
+from backend.enums import IrrigationSource
 from sqlalchemy.orm import Session, Query
 from datetime import datetime, date
 
@@ -75,7 +76,11 @@ def count_weather_readings_by_farm(
 
 
 def create_irrigation_event(db: Session, farm_id: int, event: IrrigationEventCreate) -> models.IrrigationEvent:
-    db_event = models.IrrigationEvent(**event.model_dump(), farm_id=farm_id)
+    db_event = models.IrrigationEvent(
+        **event.model_dump(),
+        farm_id=farm_id,
+        source=IrrigationSource.USER_LOG,
+    )
     db.add(db_event)
     db.commit()
     db.refresh(db_event)

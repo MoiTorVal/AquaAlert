@@ -72,7 +72,7 @@ class Farm(Base):
     acreage_acres: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
     pump_hp: Mapped[Decimal | None] = mapped_column(Numeric(6, 2))
     pump_lift_ft: Mapped[Decimal | None] = mapped_column(Numeric(6, 2))
-    water_source: Mapped[WaterSource | None] = mapped_column(SAEnum(WaterSource, name="watersource"))
+    water_source: Mapped[WaterSource | None] = mapped_column(SAEnum(WaterSource, name="watersource", values_callable=_enum_values))
 
 
 class PasswordResetToken(Base):
@@ -107,7 +107,7 @@ class AquaCropOutput(Base):
     as_of_date: Mapped[date] = mapped_column(Date, nullable=False)
     depletion_mm: Mapped[Decimal | None] = mapped_column(Numeric(6, 2))
     root_zone_moisture_pct: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
-    severity: Mapped[StressSeverity | None] = mapped_column(SAEnum(StressSeverity, name="stressseverity"))
+    severity: Mapped[StressSeverity | None] = mapped_column(SAEnum(StressSeverity, name="stressseverity", values_callable=_enum_values))
     days_to_stress: Mapped[int | None] = mapped_column(Integer)
     paw_mm: Mapped[Decimal | None] = mapped_column(Numeric(6, 2))
     raw_threshold_mm: Mapped[Decimal | None] = mapped_column(Numeric(6, 2))
@@ -115,21 +115,6 @@ class AquaCropOutput(Base):
 
     __table_args__ = (
         UniqueConstraint("farm_id", "as_of_date", name="uq_aquacrop_farm_date"),
-    )
-
-
-class BaselineIrrigation(Base):
-    __tablename__ = "baseline_irrigations"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    farm_id: Mapped[int] = mapped_column(Integer, ForeignKey("farms.id"), nullable=False)
-    season_year: Mapped[int] = mapped_column(Integer, nullable=False)
-    gallons_per_week_estimate: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
-    schedule_notes: Mapped[str | None] = mapped_column(String(500))
-    captured_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-
-    __table_args__ = (
-        UniqueConstraint("farm_id", "season_year", name="uq_baseline_farm_season"),
     )
 
 
