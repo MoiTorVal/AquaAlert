@@ -3,6 +3,8 @@ from decimal import Decimal
 from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
 from typing import Optional
 from datetime import datetime, date
+from geoalchemy2.elements import WKBElement
+from geoalchemy2.shape import to_shape
 from backend.enums import SoilTexture, StressSeverity, WaterSource, Locale, Tier, IrrigationSource
 
 class FarmBase(BaseModel):
@@ -33,6 +35,13 @@ class FarmResponse(FarmBase):
     created_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+    @field_validator("field_polygon", mode="before")
+    @classmethod
+    def _polygon_to_wkt(cls, v):
+        if isinstance(v, WKBElement):
+            return to_shape(v).wkt
+        return v
 
 class WeatherReadingCreate(BaseModel):
     farm_id: int
@@ -110,7 +119,8 @@ class ResetPasswordRequest(BaseModel):
         return v
 
 class AquaCropOutputBase(BaseModel):
-    depletion_mm: Decimal | None 
+    as_of_date: date
+    depletion_mm: Decimal | None
     root_zone_moisture_pct: Decimal | None
     severity: StressSeverity | None
     days_to_stress: int | None
@@ -129,7 +139,6 @@ class AquaCropOutputRead(AquaCropOutputBase):
 class IrrigationEventCreate(BaseModel):
     event_date: date
     gallons_applied: Decimal
-    source: IrrigationSource = IrrigationSource.USER_LOG
 
 
 class IrrigationEventResponse(BaseModel):
