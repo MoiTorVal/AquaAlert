@@ -195,3 +195,45 @@ def test_update_farm_without_polygon_leaves_it_unchanged(db, user):
     )
     updated = crud.update_farm(db, farm, FarmUpdate(name="Renamed"))
     assert updated.field_polygon is not None
+
+
+# ── baseline irrigation CRUD ─────────────────────────────────────────────────
+
+
+def test_create_baseline_irrigation(db, farm):
+    from decimal import Decimal
+    from backend.schemas import BaselineIrrigationCreate
+
+    result = crud.create_baseline_irrigation(
+        db, farm_id=farm.id,
+        baseline=BaselineIrrigationCreate(gallons_per_week_estimate=Decimal("5000.00")),
+    )
+    assert result.id is not None
+    assert result.farm_id == farm.id
+    assert result.gallons_per_week_estimate == Decimal("5000.00")
+    assert result.created_at is not None
+
+
+def test_get_baseline_irrigations_newest_first(db, farm):
+    from decimal import Decimal
+    from backend.schemas import BaselineIrrigationCreate
+
+    for value in ("4000.00", "6000.00"):
+        crud.create_baseline_irrigation(
+            db, farm_id=farm.id,
+            baseline=BaselineIrrigationCreate(gallons_per_week_estimate=Decimal(value)),
+        )
+    results = crud.get_baseline_irrigations_by_farm(db, farm_id=farm.id)
+    assert len(results) == 2
+    assert results[0].created_at >= results[1].created_at
+
+
+def test_count_baseline_irrigations_by_farm(db, farm):
+    from decimal import Decimal
+    from backend.schemas import BaselineIrrigationCreate
+
+    crud.create_baseline_irrigation(
+        db, farm_id=farm.id,
+        baseline=BaselineIrrigationCreate(gallons_per_week_estimate=Decimal("5000.00")),
+    )
+    assert crud.count_baseline_irrigations_by_farm(db, farm_id=farm.id) == 1

@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from backend import crud
 from backend.schemas import (
     FarmCreate, FarmUpdate, FarmResponse,
     WeatherReadingResponse, PaginatedWeatherResponse,
     IrrigationEventCreate, IrrigationEventResponse, PaginatedIrrigationEventResponse,
+    BaselineIrrigationCreate, BaselineIrrigationResponse, PaginatedBaselineIrrigationResponse,
     WaterSavingsResponse, PaginatedWaterSavingsResponse,
 )
 from datetime import datetime, date
@@ -100,6 +101,38 @@ def list_irrigation_events(
     return PaginatedIrrigationEventResponse(
         total=total, skip=skip, limit=limit,
         results=[IrrigationEventResponse.model_validate(r) for r in results],
+    )
+
+
+@router.post(
+    "/{farm_id}/baseline-irrigations",
+    response_model=BaselineIrrigationResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_baseline_irrigation(
+    farm_id: int,
+    baseline: BaselineIrrigationCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _validate_farm_ownership(db=db, farm_id=farm_id, user_id=current_user.id)
+    return crud.create_baseline_irrigation(db=db, farm_id=farm_id, baseline=baseline)
+
+
+@router.get("/{farm_id}/baseline-irrigations", response_model=PaginatedBaselineIrrigationResponse)
+def list_baseline_irrigations(
+    farm_id: int,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(10, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _validate_farm_ownership(db=db, farm_id=farm_id, user_id=current_user.id)
+    results = crud.get_baseline_irrigations_by_farm(db=db, farm_id=farm_id, skip=skip, limit=limit)
+    total = crud.count_baseline_irrigations_by_farm(db=db, farm_id=farm_id)
+    return PaginatedBaselineIrrigationResponse(
+        total=total, skip=skip, limit=limit,
+        results=[BaselineIrrigationResponse.model_validate(r) for r in results],
     )
 
 
