@@ -143,6 +143,12 @@ class AquaCropOutputRead(AquaCropOutputBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class WaterStressResponse(AquaCropOutputRead):
+    """AquaCrop result + stale-data guard fields ("as of [date]" trust signal)."""
+    et_latest_date: Optional[date] = None
+    et_is_stale: bool
+
+
 class IrrigationEventCreate(BaseModel):
     event_date: date
     gallons_applied: Decimal
@@ -184,6 +190,16 @@ class PaginatedBaselineIrrigationResponse(BaseModel):
     skip: int
     limit: int
     results: list[BaselineIrrigationResponse]
+
+
+class WaterSavingsBase(BaseModel):
+    period_start: date
+    period_end: date
+    baseline_gallons: Decimal
+    actual_gallons: Decimal
+    gallons_saved: Decimal
+    kwh_saved: Decimal
+    co2_kg_saved: Decimal
 
 
 class WaterSavingsResponse(BaseModel):

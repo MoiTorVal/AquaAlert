@@ -11,13 +11,14 @@ from backend.schemas import (
     BaselineIrrigationCreate, BaselineIrrigationResponse, PaginatedBaselineIrrigationResponse,
     WaterSavingsResponse, PaginatedWaterSavingsResponse,
     ETReadingCreate, ETReadingResponse, ETSeriesResponse,
-    AquaCropOutputRead,
+    AquaCropOutputRead, WaterStressResponse,
 )
 from datetime import datetime, date, timedelta
 from backend.database import get_db
 from backend.dependencies import get_current_user
 from backend.models import User
 from backend.services import openet_client
+from backend.services import scheduler as scheduler_service
 from backend.services.openet_client import ET_SOURCE, OpenETError, OpenETRateLimitError
 
 router = APIRouter()
@@ -114,7 +115,7 @@ def list_irrigation_events(
     )
 
 
-@router.get("/{farm_id}/water-stress", response_model=AquaCropOutputRead)
+@router.get("/{farm_id}/water-stress", response_model=WaterStressResponse)
 def get_water_stress(
     farm_id: int,
     db: Session = Depends(get_db),
@@ -125,7 +126,12 @@ def get_water_stress(
     output = crud.get_latest_aquacrop_output(db=db, farm_id=farm_id)
     if output is None:
         raise HTTPException(status_code=404, detail="No water-stress data available yet for this farm")
-    return output
+    et_latest_date = crud.get_latest_et_date(db=db, farm_id=farm_id)
+    return WaterStressResponse(
+        **AquaCropOutputRead.model_validate(output).model_dump(),
+        et_latest_date=et_latest_date,
+        et_is_stale=scheduler_service.is_et_stale(et_latest_date),
+    )
 
 
 @router.get("/{farm_id}/et", response_model=ETSeriesResponse)

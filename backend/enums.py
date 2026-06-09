@@ -35,3 +35,8 @@ class Tier(str, enum.Enum):
 class IrrigationSource(str, enum.Enum):
     USER_LOG = "user_log"
     ESTIMATED = "estimated"
+
+class JobStatus(str, enum.Enum):
+    RUNNING = "running"
+    SUCCESS = "success"
+    FAILED = "failed"

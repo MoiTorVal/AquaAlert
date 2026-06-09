@@ -1,11 +1,12 @@
 from backend import models
 from backend.schemas import (
     FarmCreate, FarmUpdate, WeatherReadingCreate, IrrigationEventCreate, BaselineIrrigationCreate,
-    ETReadingCreate, AquaCropOutputBase,
+    ETReadingCreate, AquaCropOutputBase, WaterSavingsBase,
 )
-from backend.enums import IrrigationSource
+from backend.enums import IrrigationSource, JobStatus
+from decimal import Decimal
 from geoalchemy2.elements import WKTElement
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session, Query
 from datetime import datetime, date
@@ -246,5 +247,98 @@ def count_water_savings_by_farm(
     end_date: date | None = None,
 ) -> int:
     return _water_savings_base_query(db, farm_id, start_date, end_date).count()
+
+
+def get_active_farms(db: Session, today: date) -> list[models.Farm]:
+    """Farms in season: planted, and not yet past harvest (no harvest date = still active)."""
+    return (
+        db.query(models.Farm)
+        .filter(
+            models.Farm.planting_date.isnot(None),
+            models.Farm.planting_date <= today,
+            or_(models.Farm.harvest_date.is_(None), models.Farm.harvest_date >= today),
+        )
+        .order_by(models.Farm.id)
+        .all()
+    )
+
+
+def get_latest_et_date(db: Session, farm_id: int) -> date | None:
+    return (
+        db.query(func.max(models.ETReading.reading_date))
+        .filter(models.ETReading.farm_id == farm_id)
+        .scalar()
+    )
+
+
+def get_latest_baseline_irrigation(db: Session, farm_id: int) -> models.BaselineIrrigation | None:
+    return (
+        db.query(models.BaselineIrrigation)
+        .filter(models.BaselineIrrigation.farm_id == farm_id)
+        .order_by(models.BaselineIrrigation.created_at.desc())
+        .first()
+    )
+
+
+def sum_irrigation_gallons(db: Session, farm_id: int, start_date: date, end_date: date) -> Decimal:
+    total = (
+        db.query(func.coalesce(func.sum(models.IrrigationEvent.gallons_applied), 0))
+        .filter(
+            models.IrrigationEvent.farm_id == farm_id,
+            models.IrrigationEvent.event_date >= start_date,
+            models.IrrigationEvent.event_date <= end_date,
+        )
+        .scalar()
+    )
+    return Decimal(total)
+
+
+def upsert_water_savings(db: Session, farm_id: int, savings: WaterSavingsBase) -> models.WaterSavings:
+    stmt = pg_insert(models.WaterSavings).values(farm_id=farm_id, **savings.model_dump()).on_conflict_do_update(
+        constraint="uq_water_savings_farm_period",
+        set_={
+            **savings.model_dump(exclude={"period_start", "period_end"}),
+            "computed_at": func.now(),
+        },
+    )
+    db.execute(stmt)
+    db.commit()
+    return (
+        db.query(models.WaterSavings)
+        .filter(
+            models.WaterSavings.farm_id == farm_id,
+            models.WaterSavings.period_start == savings.period_start,
+            models.WaterSavings.period_end == savings.period_end,
+        )
+        .one()
+    )
+
+
+def create_job_run(db: Session, job_name: str) -> models.JobRun:
+    job_run = models.JobRun(job_name=job_name, status=JobStatus.RUNNING)
+    db.add(job_run)
+    db.commit()
+    db.refresh(job_run)
+    return job_run
+
+
+def finish_job_run(
+    db: Session,
+    job_run: models.JobRun,
+    status: JobStatus,
+    processed: int = 0,
+    failed: int = 0,
+    skipped: int = 0,
+    detail: str | None = None,
+) -> models.JobRun:
+    job_run.status = status
+    job_run.finished_at = func.now()
+    job_run.farms_processed = processed
+    job_run.farms_failed = failed
+    job_run.farms_skipped = skipped
+    job_run.detail = detail
+    db.commit()
+    db.refresh(job_run)
+    return job_run
 
 
