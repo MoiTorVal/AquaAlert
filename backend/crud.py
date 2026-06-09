@@ -1,5 +1,7 @@
 from backend import models
-from backend.schemas import FarmCreate, FarmUpdate, WeatherReadingCreate, IrrigationEventCreate
+from backend.schemas import (
+    FarmCreate, FarmUpdate, WeatherReadingCreate, IrrigationEventCreate, BaselineIrrigationCreate,
+)
 from backend.enums import IrrigationSource
 from geoalchemy2.elements import WKTElement
 from sqlalchemy.orm import Session, Query
@@ -127,6 +129,38 @@ def count_irrigation_events_by_farm(
     end_date: date | None = None,
 ) -> int:
     return _irrigation_events_base_query(db, farm_id, start_date, end_date).count()
+
+
+def create_baseline_irrigation(db: Session, farm_id: int, baseline: BaselineIrrigationCreate) -> models.BaselineIrrigation:
+    db_baseline = models.BaselineIrrigation(**baseline.model_dump(), farm_id=farm_id)
+    db.add(db_baseline)
+    db.commit()
+    db.refresh(db_baseline)
+    return db_baseline
+
+
+def get_baseline_irrigations_by_farm(
+    db: Session,
+    farm_id: int,
+    skip: int = 0,
+    limit: int = 10,
+) -> list[models.BaselineIrrigation]:
+    return (
+        db.query(models.BaselineIrrigation)
+        .filter(models.BaselineIrrigation.farm_id == farm_id)
+        .order_by(models.BaselineIrrigation.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+
+
+def count_baseline_irrigations_by_farm(db: Session, farm_id: int) -> int:
+    return (
+        db.query(models.BaselineIrrigation)
+        .filter(models.BaselineIrrigation.farm_id == farm_id)
+        .count()
+    )
 
 
 def _water_savings_base_query(db: Session, farm_id: int, start_date: date | None, end_date: date | None) -> Query:

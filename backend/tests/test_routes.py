@@ -216,6 +216,7 @@ LIST_PATHS = [
     "/farms/",
     "/farms/{farm_id}/weather",
     "/farms/{farm_id}/irrigation-events",
+    "/farms/{farm_id}/baseline-irrigations",
     "/farms/{farm_id}/water-savings",
 ]
 
@@ -308,6 +309,77 @@ def test_list_irrigation_events_date_filter(client, farm):
     body = response.json()
     assert body["total"] == 1
     assert body["results"][0]["event_date"] == "2026-06-05"
+
+
+# ── baseline irrigation routes ───────────────────────────────────────────────
+
+
+def test_create_baseline_irrigation(client, farm):
+    response = client.post(
+        f"/farms/{farm.id}/baseline-irrigations",
+        json={"gallons_per_week_estimate": "5000.00"},
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["farm_id"] == farm.id
+    assert data["gallons_per_week_estimate"] == "5000.00"
+    assert data["created_at"] is not None
+
+
+def test_create_baseline_irrigation_unknown_farm(client):
+    response = client.post(
+        "/farms/9999/baseline-irrigations",
+        json={"gallons_per_week_estimate": "5000.00"},
+    )
+    assert response.status_code == 404
+
+
+def test_create_baseline_irrigation_other_user_returns_404(client, db):
+    other = User(email="other@example.com", hashed_password="dummy", name="Other")
+    db.add(other)
+    db.commit()
+    db.refresh(other)
+    other_farm = crud.create_farm(db, FarmCreate(name="Other Farm"), user_id=other.id)
+    response = client.post(
+        f"/farms/{other_farm.id}/baseline-irrigations",
+        json={"gallons_per_week_estimate": "5000.00"},
+    )
+    assert response.status_code == 404
+
+
+def test_create_baseline_irrigation_unauthenticated(unauthed_client, farm):
+    response = unauthed_client.post(
+        f"/farms/{farm.id}/baseline-irrigations",
+        json={"gallons_per_week_estimate": "5000.00"},
+    )
+    assert response.status_code == 401
+
+
+@pytest.mark.parametrize("bad_value", ["0", "-100.00"])
+def test_create_baseline_irrigation_non_positive_rejected(client, farm, bad_value):
+    response = client.post(
+        f"/farms/{farm.id}/baseline-irrigations",
+        json={"gallons_per_week_estimate": bad_value},
+    )
+    assert response.status_code == 422
+
+
+def test_list_baseline_irrigations(client, farm):
+    for value in ("4000.00", "6000.00"):
+        client.post(
+            f"/farms/{farm.id}/baseline-irrigations",
+            json={"gallons_per_week_estimate": value},
+        )
+    response = client.get(f"/farms/{farm.id}/baseline-irrigations")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 2
+    assert len(body["results"]) == 2
+
+
+def test_list_baseline_irrigations_unknown_farm(client):
+    response = client.get("/farms/9999/baseline-irrigations")
+    assert response.status_code == 404
 
 
 # ── water savings routes ─────────────────────────────────────────────────────

@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 from typing import Optional
 from datetime import datetime, date
 from geoalchemy2.elements import WKBElement
@@ -157,6 +157,26 @@ class PaginatedIrrigationEventResponse(BaseModel):
     skip: int
     limit: int
     results: list[IrrigationEventResponse]
+
+
+class BaselineIrrigationCreate(BaseModel):
+    gallons_per_week_estimate: Decimal = Field(gt=0)
+
+
+class BaselineIrrigationResponse(BaseModel):
+    id: int
+    farm_id: int
+    gallons_per_week_estimate: Decimal
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PaginatedBaselineIrrigationResponse(BaseModel):
+    total: int
+    skip: int
+    limit: int
+    results: list[BaselineIrrigationResponse]
 
 
 class WaterSavingsResponse(BaseModel):

@@ -132,6 +132,15 @@ class IrrigationEvent(Base):
     logged_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
+class BaselineIrrigation(Base):
+    __tablename__ = "baseline_irrigations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    farm_id: Mapped[int] = mapped_column(Integer, ForeignKey("farms.id"), nullable=False)
+    gallons_per_week_estimate: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
 class WaterSavings(Base):
     __tablename__ = "water_savings"
 
