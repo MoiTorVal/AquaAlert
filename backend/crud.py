@@ -1,9 +1,12 @@
 from backend import models
 from backend.schemas import (
     FarmCreate, FarmUpdate, WeatherReadingCreate, IrrigationEventCreate, BaselineIrrigationCreate,
+    ETReadingCreate, AquaCropOutputBase,
 )
 from backend.enums import IrrigationSource
 from geoalchemy2.elements import WKTElement
+from sqlalchemy import func
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session, Query
 from datetime import datetime, date
 
@@ -129,6 +132,53 @@ def count_irrigation_events_by_farm(
     end_date: date | None = None,
 ) -> int:
     return _irrigation_events_base_query(db, farm_id, start_date, end_date).count()
+
+
+def get_et_readings_by_farm(
+    db: Session,
+    farm_id: int,
+    start_date: date | None = None,
+    end_date: date | None = None,
+) -> list[models.ETReading]:
+    query = db.query(models.ETReading).filter(models.ETReading.farm_id == farm_id)
+    if start_date:
+        query = query.filter(models.ETReading.reading_date >= start_date)
+    if end_date:
+        query = query.filter(models.ETReading.reading_date <= end_date)
+    return query.order_by(models.ETReading.reading_date).all()
+
+
+def create_et_readings(db: Session, readings: list[ETReadingCreate]) -> list[models.ETReading]:
+    rows = [models.ETReading(**reading.model_dump()) for reading in readings]
+    db.add_all(rows)
+    db.commit()
+    return rows
+
+
+def get_latest_aquacrop_output(db: Session, farm_id: int) -> models.AquaCropOutput | None:
+    return (
+        db.query(models.AquaCropOutput)
+        .filter(models.AquaCropOutput.farm_id == farm_id)
+        .order_by(models.AquaCropOutput.as_of_date.desc())
+        .first()
+    )
+
+
+def upsert_aquacrop_output(db: Session, farm_id: int, output: AquaCropOutputBase) -> models.AquaCropOutput:
+    stmt = pg_insert(models.AquaCropOutput).values(farm_id=farm_id, **output.model_dump()).on_conflict_do_update(
+        constraint="uq_aquacrop_farm_date",
+        set_={**output.model_dump(exclude={"as_of_date"}), "run_date": func.now()},
+    )
+    db.execute(stmt)
+    db.commit()
+    return (
+        db.query(models.AquaCropOutput)
+        .filter(
+            models.AquaCropOutput.farm_id == farm_id,
+            models.AquaCropOutput.as_of_date == output.as_of_date,
+        )
+        .one()
+    )
 
 
 def create_baseline_irrigation(db: Session, farm_id: int, baseline: BaselineIrrigationCreate) -> models.BaselineIrrigation:

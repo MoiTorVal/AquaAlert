@@ -1,4 +1,7 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from geoalchemy2.shape import to_shape
 from sqlalchemy.orm import Session
 from backend import crud
 from backend.schemas import (
@@ -7,13 +10,20 @@ from backend.schemas import (
     IrrigationEventCreate, IrrigationEventResponse, PaginatedIrrigationEventResponse,
     BaselineIrrigationCreate, BaselineIrrigationResponse, PaginatedBaselineIrrigationResponse,
     WaterSavingsResponse, PaginatedWaterSavingsResponse,
+    ETReadingCreate, ETReadingResponse, ETSeriesResponse,
+    AquaCropOutputRead,
 )
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from backend.database import get_db
 from backend.dependencies import get_current_user
 from backend.models import User
+from backend.services import openet_client
+from backend.services.openet_client import ET_SOURCE, OpenETError, OpenETRateLimitError
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
+
+MAX_ET_RANGE_DAYS = 366
 
 
 def _validate_farm_ownership(db: Session, farm_id: int, user_id: int):
@@ -101,6 +111,79 @@ def list_irrigation_events(
     return PaginatedIrrigationEventResponse(
         total=total, skip=skip, limit=limit,
         results=[IrrigationEventResponse.model_validate(r) for r in results],
+    )
+
+
+@router.get("/{farm_id}/water-stress", response_model=AquaCropOutputRead)
+def get_water_stress(
+    farm_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Latest cached AquaCrop result; sims never run on the request path (scheduler computes them)."""
+    _validate_farm_ownership(db=db, farm_id=farm_id, user_id=current_user.id)
+    output = crud.get_latest_aquacrop_output(db=db, farm_id=farm_id)
+    if output is None:
+        raise HTTPException(status_code=404, detail="No water-stress data available yet for this farm")
+    return output
+
+
+@router.get("/{farm_id}/et", response_model=ETSeriesResponse)
+async def get_et_series(
+    farm_id: int,
+    from_date: date = Query(alias="from"),
+    to_date: date = Query(alias="to"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    db_farm = _validate_farm_ownership(db=db, farm_id=farm_id, user_id=current_user.id)
+    if to_date < from_date:
+        raise HTTPException(status_code=422, detail="'to' must be on or after 'from'")
+    if (to_date - from_date).days + 1 > MAX_ET_RANGE_DAYS:
+        raise HTTPException(status_code=422, detail=f"Date range cannot exceed {MAX_ET_RANGE_DAYS} days")
+    if db_farm.field_polygon is None:
+        raise HTTPException(status_code=400, detail="Farm has no field polygon; draw the field boundary first")
+
+    cached = crud.get_et_readings_by_farm(db=db, farm_id=farm_id, start_date=from_date, end_date=to_date)
+    cached_dates = {r.reading_date for r in cached}
+    today = date.today()
+    requested = [from_date + timedelta(days=i) for i in range((to_date - from_date).days + 1)]
+    missing = [d for d in requested if d not in cached_dates and d <= today]
+
+    if missing:
+        geometry = openet_client.polygon_to_geometry(to_shape(db_farm.field_polygon))
+        try:
+            points = await openet_client.fetch_daily_et(geometry, missing[0], missing[-1])
+        except OpenETRateLimitError as exc:
+            logger.warning("OpenET rate limit for farm %d: %s", farm_id, exc)
+            raise HTTPException(status_code=503, detail="ET data provider rate limit reached; try again later")
+        except OpenETError as exc:
+            logger.error("OpenET fetch failed for farm %d: %s", farm_id, exc)
+            raise HTTPException(status_code=502, detail="ET data provider is unavailable")
+
+        points = openet_client.trim_gapfill_tail(points)
+        missing_set = set(missing)
+        new_readings = [
+            ETReadingCreate(
+                farm_id=farm_id,
+                reading_date=p["reading_date"],
+                et_mm=p["et_mm"],
+                source=ET_SOURCE,
+            )
+            for p in points
+            if p["reading_date"] in missing_set
+        ]
+        if new_readings:
+            crud.create_et_readings(db=db, readings=new_readings)
+            cached = crud.get_et_readings_by_farm(db=db, farm_id=farm_id, start_date=from_date, end_date=to_date)
+
+    as_of = max((r.reading_date for r in cached), default=None)
+    return ETSeriesResponse(
+        farm_id=farm_id,
+        start_date=from_date,
+        end_date=to_date,
+        as_of=as_of,
+        results=[ETReadingResponse.model_validate(r) for r in cached],
     )
 
 

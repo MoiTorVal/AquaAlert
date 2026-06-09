@@ -74,6 +74,13 @@ class ETReadingResponse(ETReadingCreate):
     fetched_at: Optional[datetime] = None
     model_config = ConfigDict(from_attributes=True)
 
+class ETSeriesResponse(BaseModel):
+    farm_id: int
+    start_date: date
+    end_date: date
+    as_of: Optional[date]
+    results: list[ETReadingResponse]
+
 class SignupRequest(BaseModel):
     email: EmailStr
     password: str
