@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     db_name: str
     db_port: int
     openweather_api_key: SecretStr
+    openet_api_key: SecretStr | None = None
     next_public_api_base_url: str
     allowed_origins: list[str] = ["http://localhost:3000"]
     secure_cookie: bool = False
