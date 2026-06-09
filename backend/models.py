@@ -4,7 +4,7 @@ from datetime import datetime, date
 from sqlalchemy import String, Integer, Numeric, DateTime, Date, Boolean, ForeignKey, UniqueConstraint, Enum as SAEnum, func
 from sqlalchemy.orm import Mapped, mapped_column
 from backend.database import Base
-from geoalchemy2 import Geometry
+from geoalchemy2 import Geography
 from backend.enums import SoilTexture, StressSeverity, WaterSource, Locale, Tier, IrrigationSource
 
 
@@ -67,7 +67,7 @@ class Farm(Base):
     planting_date: Mapped[date | None] = mapped_column(Date)
     field_capacity_pct: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
     wilting_point_pct: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
-    field_polygon: Mapped[str | None] = mapped_column(Geometry("POLYGON", srid=4326), nullable=True)
+    field_polygon: Mapped[str | None] = mapped_column(Geography("POLYGON", srid=4326), nullable=True)
     harvest_date: Mapped[date | None] = mapped_column(Date)
     acreage_acres: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
     pump_hp: Mapped[Decimal | None] = mapped_column(Numeric(6, 2))

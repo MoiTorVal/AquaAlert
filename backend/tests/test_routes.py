@@ -1,7 +1,14 @@
+from datetime import date
+from decimal import Decimal
+
 import pytest
-from backend.models import User
+from shapely import wkt as shapely_wkt
+
+from backend.models import User, WaterSavings
 from backend import crud
 from backend.schemas import FarmCreate
+
+POLYGON_WKT = "POLYGON ((-120.5 36.5, -120.4 36.5, -120.4 36.6, -120.5 36.6, -120.5 36.5))"
 
 
 # ── auth routes ──────────────────────────────────────────────────────────────
@@ -199,5 +206,150 @@ def test_update_farm_other_user_returns_404(client, db):
 
 def test_get_weather_readings_unknown_farm(client):
     response = client.get("/farms/9999/weather")
+    assert response.status_code == 404
+
+
+# ── pagination caps ──────────────────────────────────────────────────────────
+
+
+LIST_PATHS = [
+    "/farms/",
+    "/farms/{farm_id}/weather",
+    "/farms/{farm_id}/irrigation-events",
+    "/farms/{farm_id}/water-savings",
+]
+
+
+@pytest.mark.parametrize("path", LIST_PATHS)
+def test_list_limit_over_100_rejected(client, farm, path):
+    response = client.get(path.format(farm_id=farm.id), params={"limit": 101})
+    assert response.status_code == 422
+
+
+@pytest.mark.parametrize("path", LIST_PATHS)
+def test_list_limit_100_accepted(client, farm, path):
+    response = client.get(path.format(farm_id=farm.id), params={"limit": 100})
+    assert response.status_code == 200
+
+
+@pytest.mark.parametrize("path", LIST_PATHS)
+def test_list_limit_zero_rejected(client, farm, path):
+    response = client.get(path.format(farm_id=farm.id), params={"limit": 0})
+    assert response.status_code == 422
+
+
+@pytest.mark.parametrize("path", LIST_PATHS)
+def test_list_negative_skip_rejected(client, farm, path):
+    response = client.get(path.format(farm_id=farm.id), params={"skip": -1})
+    assert response.status_code == 422
+
+
+# ── field polygon ────────────────────────────────────────────────────────────
+
+
+def test_create_farm_with_polygon_returns_wkt(client):
+    response = client.post("/farms/", json={"name": "Poly Farm", "field_polygon": POLYGON_WKT})
+    assert response.status_code == 200
+    returned = response.json()["field_polygon"]
+    assert shapely_wkt.loads(returned).equals(shapely_wkt.loads(POLYGON_WKT))
+
+
+def test_update_farm_polygon(client, farm):
+    response = client.put(f"/farms/{farm.id}", json={"field_polygon": POLYGON_WKT})
+    assert response.status_code == 200
+    returned = response.json()["field_polygon"]
+    assert shapely_wkt.loads(returned).equals(shapely_wkt.loads(POLYGON_WKT))
+
+
+# ── irrigation event routes ──────────────────────────────────────────────────
+
+
+def test_log_irrigation_event(client, farm):
+    response = client.post(
+        f"/farms/{farm.id}/irrigation-events",
+        json={"event_date": "2026-06-01", "gallons_applied": "1500.00"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["farm_id"] == farm.id
+    assert data["source"] == "user_log"
+
+
+def test_log_irrigation_event_unknown_farm(client):
+    response = client.post(
+        "/farms/9999/irrigation-events",
+        json={"event_date": "2026-06-01", "gallons_applied": "1500.00"},
+    )
+    assert response.status_code == 404
+
+
+def test_list_irrigation_events(client, farm):
+    for day in ("2026-06-01", "2026-06-05"):
+        client.post(
+            f"/farms/{farm.id}/irrigation-events",
+            json={"event_date": day, "gallons_applied": "100.00"},
+        )
+    response = client.get(f"/farms/{farm.id}/irrigation-events")
+    assert response.status_code == 200
+    assert response.json()["total"] == 2
+
+
+def test_list_irrigation_events_date_filter(client, farm):
+    for day in ("2026-06-01", "2026-06-05", "2026-06-10"):
+        client.post(
+            f"/farms/{farm.id}/irrigation-events",
+            json={"event_date": day, "gallons_applied": "100.00"},
+        )
+    response = client.get(
+        f"/farms/{farm.id}/irrigation-events",
+        params={"start_date": "2026-06-03", "end_date": "2026-06-08"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 1
+    assert body["results"][0]["event_date"] == "2026-06-05"
+
+
+# ── water savings routes ─────────────────────────────────────────────────────
+
+
+def _add_water_savings(db, farm_id, start, end):
+    row = WaterSavings(
+        farm_id=farm_id,
+        period_start=start,
+        period_end=end,
+        baseline_gallons=Decimal("1000.00"),
+        actual_gallons=Decimal("800.00"),
+        gallons_saved=Decimal("200.00"),
+        kwh_saved=Decimal("5.00"),
+        co2_kg_saved=Decimal("2.00"),
+    )
+    db.add(row)
+    db.commit()
+    return row
+
+
+def test_list_water_savings(client, db, farm):
+    _add_water_savings(db, farm.id, date(2026, 5, 1), date(2026, 5, 31))
+    response = client.get(f"/farms/{farm.id}/water-savings")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 1
+    assert body["results"][0]["gallons_saved"] == "200.00"
+
+
+def test_list_water_savings_date_filter(client, db, farm):
+    _add_water_savings(db, farm.id, date(2026, 4, 1), date(2026, 4, 30))
+    _add_water_savings(db, farm.id, date(2026, 5, 1), date(2026, 5, 31))
+    response = client.get(
+        f"/farms/{farm.id}/water-savings",
+        params={"start_date": "2026-05-01", "end_date": "2026-05-31"},
+    )
+    assert response.status_code == 200
+    assert response.json()["total"] == 1
+
+
+def test_list_water_savings_unknown_farm(client):
+    response = client.get("/farms/9999/water-savings")
     assert response.status_code == 404
 

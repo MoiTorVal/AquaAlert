@@ -155,3 +155,43 @@ def test_get_farms_pagination(db, user):
         crud.create_farm(db, FarmCreate(name=f"Farm {i}"), user_id=user.id)
     results = crud.get_farms(db, user_id=user.id, skip=2, limit=2)
     assert len(results) == 2
+
+
+# ── field polygon ────────────────────────────────────────────────────────────
+
+
+POLYGON_WKT = "POLYGON ((-120.5 36.5, -120.4 36.5, -120.4 36.6, -120.5 36.6, -120.5 36.5))"
+
+
+def test_create_farm_with_polygon(db, user):
+    from geoalchemy2.shape import to_shape
+    from shapely import wkt as shapely_wkt
+
+    result = crud.create_farm(
+        db,
+        FarmCreate(name="Poly Farm", field_polygon=POLYGON_WKT),
+        user_id=user.id,
+    )
+    assert result.field_polygon is not None
+    assert to_shape(result.field_polygon).equals(shapely_wkt.loads(POLYGON_WKT))
+
+
+def test_update_farm_polygon(db, farm):
+    from backend.schemas import FarmUpdate
+    from geoalchemy2.shape import to_shape
+    from shapely import wkt as shapely_wkt
+
+    updated = crud.update_farm(db, farm, FarmUpdate(field_polygon=POLYGON_WKT))
+    assert to_shape(updated.field_polygon).equals(shapely_wkt.loads(POLYGON_WKT))
+
+
+def test_update_farm_without_polygon_leaves_it_unchanged(db, user):
+    from backend.schemas import FarmUpdate
+
+    farm = crud.create_farm(
+        db,
+        FarmCreate(name="Poly Farm", field_polygon=POLYGON_WKT),
+        user_id=user.id,
+    )
+    updated = crud.update_farm(db, farm, FarmUpdate(name="Renamed"))
+    assert updated.field_polygon is not None

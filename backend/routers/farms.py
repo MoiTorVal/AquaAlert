@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from backend import crud
 from backend.schemas import (
@@ -31,7 +31,7 @@ def read_farm(farm_id: int, db: Session = Depends(get_db), current_user: User = 
     return db_farm
 
 @router.get("/", response_model=list[FarmResponse])
-def read_farms(skip: int = 0, limit: int = 10, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def read_farms(skip: int = Query(0, ge=0), limit: int = Query(10, ge=1, le=100), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     return crud.get_farms(db=db, user_id=current_user.id, skip=skip, limit=limit)
 
 @router.delete("/{farm_id}", response_model=FarmResponse)
@@ -48,8 +48,8 @@ def update_farm(farm_id: int, farm_update: FarmUpdate, db: Session = Depends(get
 @router.get("/{farm_id}/weather", response_model=PaginatedWeatherResponse)
 def read_weather_readings_by_farm(
     farm_id: int,
-    skip: int = 0,
-    limit: int = 10,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(10, ge=1, le=100),
     start_date: datetime | None = None,
     end_date: datetime | None = None,
     db: Session = Depends(get_db),
@@ -82,8 +82,8 @@ def log_irrigation_event(
 @router.get("/{farm_id}/irrigation-events", response_model=PaginatedIrrigationEventResponse)
 def list_irrigation_events(
     farm_id: int,
-    skip: int = 0,
-    limit: int = 10,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(10, ge=1, le=100),
     start_date: date | None = None,
     end_date: date | None = None,
     db: Session = Depends(get_db),
@@ -106,8 +106,8 @@ def list_irrigation_events(
 @router.get("/{farm_id}/water-savings", response_model=PaginatedWaterSavingsResponse)
 def list_water_savings(
     farm_id: int,
-    skip: int = 0,
-    limit: int = 10,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(10, ge=1, le=100),
     start_date: date | None = None,
     end_date: date | None = None,
     db: Session = Depends(get_db),
