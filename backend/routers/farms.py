@@ -1,6 +1,8 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from decimal import Decimal
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from geoalchemy2.shape import to_shape
 from sqlalchemy.orm import Session
 from backend import crud
@@ -10,6 +12,7 @@ from backend.schemas import (
     IrrigationEventCreate, IrrigationEventResponse, PaginatedIrrigationEventResponse,
     BaselineIrrigationCreate, BaselineIrrigationResponse, PaginatedBaselineIrrigationResponse,
     WaterSavingsResponse, PaginatedWaterSavingsResponse,
+    SavingsSeriesResponse, SavingsTotals,
     ETReadingCreate, ETReadingResponse, ETSeriesResponse,
     AquaCropOutputRead, WaterStressResponse,
 )
@@ -17,7 +20,7 @@ from datetime import datetime, date, timedelta
 from backend.database import get_db
 from backend.dependencies import get_current_user
 from backend.models import User
-from backend.services import openet_client
+from backend.services import openet_client, sgma_export
 from backend.services import scheduler as scheduler_service
 from backend.services.openet_client import ET_SOURCE, OpenETError, OpenETRateLimitError
 
@@ -222,6 +225,55 @@ def list_baseline_irrigations(
     return PaginatedBaselineIrrigationResponse(
         total=total, skip=skip, limit=limit,
         results=[BaselineIrrigationResponse.model_validate(r) for r in results],
+    )
+
+
+@router.get("/{farm_id}/savings", response_model=SavingsSeriesResponse)
+def get_savings_series(
+    farm_id: int,
+    from_date: date = Query(alias="from"),
+    to_date: date = Query(alias="to"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _validate_farm_ownership(db=db, farm_id=farm_id, user_id=current_user.id)
+    if to_date < from_date:
+        raise HTTPException(status_code=422, detail="'to' must be on or after 'from'")
+    rows = crud.get_water_savings_series(db=db, farm_id=farm_id, start_date=from_date, end_date=to_date)
+    totals = SavingsTotals(
+        baseline_gallons=sum((r.baseline_gallons for r in rows), Decimal("0")),
+        actual_gallons=sum((r.actual_gallons for r in rows), Decimal("0")),
+        gallons_saved=sum((r.gallons_saved for r in rows), Decimal("0")),
+        kwh_saved=sum((r.kwh_saved for r in rows), Decimal("0")),
+        co2_kg_saved=sum((r.co2_kg_saved for r in rows), Decimal("0")),
+    )
+    return SavingsSeriesResponse(
+        farm_id=farm_id, start_date=from_date, end_date=to_date, totals=totals,
+        results=[WaterSavingsResponse.model_validate(r) for r in rows],
+    )
+
+
+@router.get("/{farm_id}/sgma-export")
+def sgma_export_report(
+    farm_id: int,
+    year: int = Query(ge=2020, le=2100),
+    format: str = Query("csv", pattern="^(csv|pdf)$"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    db_farm = _validate_farm_ownership(db=db, farm_id=farm_id, user_id=current_user.id)
+    monthly = crud.monthly_extraction_gallons(db=db, farm_id=farm_id, year=year)
+    filename = f"sgma-report-{year}-farm-{farm_id}.{format}"
+    if format == "pdf":
+        content: bytes | str = sgma_export.build_pdf(db_farm, year, monthly)
+        media_type = "application/pdf"
+    else:
+        content = sgma_export.build_csv(db_farm, year, monthly)
+        media_type = "text/csv"
+    return Response(
+        content=content,
+        media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
 

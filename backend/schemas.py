@@ -114,6 +114,14 @@ class UserResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+class UserUpdateRequest(BaseModel):
+    """Self-service profile updates. Equity fields are voluntary self-ID —
+    always optional, may be set back to null (decline to answer)."""
+    locale: Optional[Locale] = None
+    is_socially_disadvantaged: Optional[bool] = None
+    is_beginning_farmer: Optional[bool] = None
+
+
 class ResetPasswordRequest(BaseModel):
     token: str
     new_password: str
@@ -222,3 +230,34 @@ class PaginatedWaterSavingsResponse(BaseModel):
     skip: int
     limit: int
     results: list[WaterSavingsResponse]
+
+
+class SavingsTotals(BaseModel):
+    baseline_gallons: Decimal
+    actual_gallons: Decimal
+    gallons_saved: Decimal
+    kwh_saved: Decimal
+    co2_kg_saved: Decimal
+
+
+class SavingsSeriesResponse(BaseModel):
+    farm_id: int
+    start_date: date
+    end_date: date
+    totals: SavingsTotals
+    results: list[WaterSavingsResponse]
+
+
+class RegionalStatsResponse(BaseModel):
+    """Public aggregate — no farm-identifiable or equity data, ever."""
+    snapshot_date: date
+    total_farms: int
+    farms_green: int
+    farms_yellow: int
+    farms_red: int
+    total_gallons_saved: Decimal
+    total_kwh_saved: Decimal
+    total_co2_kg_saved: Decimal
+    computed_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)

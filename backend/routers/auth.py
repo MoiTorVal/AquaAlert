@@ -8,6 +8,7 @@ from backend.schemas import (
     LoginRequest,
     ForgotPasswordRequest,
     UserResponse,
+    UserUpdateRequest,
     ResetPasswordRequest
 )
 from backend.auth import hash_password, verify_password, create_access_token
@@ -126,4 +127,18 @@ def logout():
 
 @router.get("/me", response_model=UserResponse)
 def get_me(current_user: models.User = Depends(get_current_user)):
+    return current_user
+
+@router.patch("/me", response_model=UserResponse)
+def update_me(
+    body: UserUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    # exclude_unset so omitted fields stay untouched while an explicit null
+    # clears an equity answer (voluntary self-ID, must be revocable)
+    for key, value in body.model_dump(exclude_unset=True).items():
+        setattr(current_user, key, value)
+    db.commit()
+    db.refresh(current_user)
     return current_user

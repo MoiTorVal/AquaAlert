@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.database import engine
 from sqlalchemy import text
 from contextlib import asynccontextmanager
-from backend.routers import farms, auth
+from backend.routers import farms, auth, public
 from backend.config import settings
 from backend.services.scheduler import start_scheduler, shutdown_scheduler
 import logging
@@ -39,3 +39,4 @@ app.add_middleware(
 
 app.include_router(farms.router, prefix="/farms", tags=["farms"])
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
+app.include_router(public.router, tags=["public"])

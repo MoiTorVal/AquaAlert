@@ -31,7 +31,7 @@ export default function SignupPage() {
         email: values.email,
         password: values.password,
       });
-      router.push("/dashboard");
+      router.push("/welcome");
     } catch (error) {
       setServerError(
         error instanceof Error ? error.message : "An error occurred",
@@ -85,7 +85,7 @@ export default function SignupPage() {
               label="Confirm Password"
               type="password"
               placeholder="••••••••"
-              autoComplete="current-password"
+              autoComplete="new-password"
               error={errors.confirmPassword?.message}
               {...register("confirmPassword")}
             />

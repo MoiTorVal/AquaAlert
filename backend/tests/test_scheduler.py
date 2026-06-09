@@ -331,7 +331,11 @@ def test_start_and_shutdown_scheduler():
         s = scheduler_module.start_scheduler()
         try:
             assert s.running
-            assert {job.id for job in s.get_jobs()} == {ET_SIM_JOB_NAME, SAVINGS_JOB_NAME}
+            assert {job.id for job in s.get_jobs()} == {
+                ET_SIM_JOB_NAME,
+                SAVINGS_JOB_NAME,
+                scheduler_module.REGIONAL_STATS_JOB_NAME,
+            }
             assert scheduler_module.start_scheduler() is s  # idempotent
         finally:
             scheduler_module.shutdown_scheduler()
