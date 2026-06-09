@@ -20,10 +20,17 @@ export interface ForgotPasswordRequest {
   email: string;
 }
 
+export const LocaleSchema = z.enum(["en", "es"]);
+export const TierSchema = z.enum(["free", "paid"]);
+
 export const UserSchema = z.object({
   id: z.number(),
   email: z.string(),
   name: z.string().nullable(),
+  locale: LocaleSchema,
+  tier: TierSchema,
+  is_socially_disadvantaged: z.boolean().nullable(),
+  is_beginning_farmer: z.boolean().nullable(),
 });
 
 export const AuthResponseSchema = z.object({
@@ -35,6 +42,23 @@ export const MessageResponseSchema = z.object({
   message: z.string(),
 });
 
+export const SoilTextureSchema = z.enum([
+  "Sandy",
+  "LoamySand",
+  "SandyLoam",
+  "Loam",
+  "SiltLoam",
+  "Silt",
+  "SandyClayLoam",
+  "ClayLoam",
+  "SiltyClayLoam",
+  "SandyClay",
+  "SiltyClay",
+  "Clay",
+]);
+
+export const WaterSourceSchema = z.enum(["well", "canal", "surface"]);
+
 export const FarmSchema = z.object({
   id: z.number(),
   user_id: z.number(),
@@ -42,12 +66,18 @@ export const FarmSchema = z.object({
   location: z.string().nullable(),
   area_hectares: z.number().nullable(),
   crop_type: z.string().nullable(),
-  soil_type: z.string().nullable(),
+  soil_type: SoilTextureSchema.nullable(),
   root_depth_cm: z.number().nullable(),
   growth_stage: z.string().nullable(),
   planting_date: z.string().nullable(),
   field_capacity_pct: z.number().nullable(),
   wilting_point_pct: z.number().nullable(),
+  field_polygon: z.string().nullable(),
+  harvest_date: z.string().nullable(),
+  acreage_acres: z.number().nullable(),
+  pump_hp: z.number().nullable(),
+  pump_lift_ft: z.number().nullable(),
+  water_source: WaterSourceSchema.nullable(),
   created_at: z.string().nullable(),
 });
 

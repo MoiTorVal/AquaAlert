@@ -1,13 +1,20 @@
 from backend import models
 from backend.schemas import FarmCreate, FarmUpdate, WeatherReadingCreate, IrrigationEventCreate
 from backend.enums import IrrigationSource
+from geoalchemy2.elements import WKTElement
 from sqlalchemy.orm import Session, Query
 from datetime import datetime, date
 
 
+def _wrap_field_polygon(data: dict) -> dict:
+    if data.get("field_polygon") is not None:
+        data["field_polygon"] = WKTElement(data["field_polygon"], srid=4326)
+    return data
+
+
 # CRUD operations for farms
 def create_farm(db: Session, farm: FarmCreate, user_id: int) -> models.Farm:
-    db_farm = models.Farm(**farm.model_dump(), user_id=user_id)
+    db_farm = models.Farm(**_wrap_field_polygon(farm.model_dump()), user_id=user_id)
     db.add(db_farm)
     db.commit()
     db.refresh(db_farm)
@@ -25,7 +32,7 @@ def delete_farm(db: Session, farm: models.Farm) -> models.Farm:
     return farm
 
 def update_farm(db: Session, farm: models.Farm, farm_update: FarmUpdate) -> models.Farm:
-    for key, value in farm_update.model_dump(exclude_unset=True).items():
+    for key, value in _wrap_field_polygon(farm_update.model_dump(exclude_unset=True)).items():
         setattr(farm, key, value)
     db.commit()
     db.refresh(farm)

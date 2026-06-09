@@ -1,8 +1,10 @@
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 
 import jwt
 
 from backend.auth import create_access_token, SECRET_KEY, ALGORITHM
+from backend.models import PasswordResetToken
+from backend.routers.auth import hash_token
 
 
 def test_signup_invalid_email(unauthed_client):
@@ -60,3 +62,65 @@ def test_token_deleted_user_rejected(unauthed_client):
     unauthed_client.cookies.set("access_token", token)
     response = unauthed_client.get("/farms/")
     assert response.status_code == 401
+
+
+# ── reset password ───────────────────────────────────────────────────────────
+
+
+def _create_reset_token(db, user, expires_delta):
+    token = "plain-test-reset-token"
+    db.add(PasswordResetToken(
+        user_id=user.id,
+        token=hash_token(token),
+        expires_at=datetime.now(timezone.utc) + expires_delta,
+    ))
+    db.commit()
+    return token
+
+
+def test_reset_password_valid_token(db, unauthed_client, user):
+    token = _create_reset_token(db, user, timedelta(hours=1))
+    response = unauthed_client.post("/auth/reset-password", json={
+        "token": token,
+        "new_password": "brandnewpass",
+    })
+    assert response.status_code == 200
+
+    login = unauthed_client.post("/auth/login", json={
+        "email": user.email,
+        "password": "brandnewpass",
+    })
+    assert login.status_code == 200
+
+
+def test_reset_password_expired_token(db, unauthed_client, user):
+    token = _create_reset_token(db, user, timedelta(hours=-1))
+    response = unauthed_client.post("/auth/reset-password", json={
+        "token": token,
+        "new_password": "brandnewpass",
+    })
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Invalid or expired token"
+
+
+def test_reset_password_unknown_token(unauthed_client):
+    response = unauthed_client.post("/auth/reset-password", json={
+        "token": "never-issued",
+        "new_password": "brandnewpass",
+    })
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Invalid or expired token"
+
+
+def test_reset_password_token_single_use(db, unauthed_client, user):
+    token = _create_reset_token(db, user, timedelta(hours=1))
+    first = unauthed_client.post("/auth/reset-password", json={
+        "token": token,
+        "new_password": "brandnewpass",
+    })
+    assert first.status_code == 200
+    second = unauthed_client.post("/auth/reset-password", json={
+        "token": token,
+        "new_password": "anotherpass1",
+    })
+    assert second.status_code == 400

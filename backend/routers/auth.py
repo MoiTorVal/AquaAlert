@@ -103,7 +103,7 @@ def reset_password(body: ResetPasswordRequest, db: Session = Depends(get_db)):
         models.PasswordResetToken.token == hash_token(body.token)
     ).first()
 
-    now = datetime.now(timezone.utc).replace(tzinfo=None)  
+    now = datetime.now(timezone.utc)
     if not reset_token or reset_token.expires_at < now:
         raise HTTPException(status_code=400, detail="Invalid or expired token")
 
