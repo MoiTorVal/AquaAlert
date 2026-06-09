@@ -124,3 +124,45 @@ def test_reset_password_token_single_use(db, unauthed_client, user):
         "new_password": "anotherpass1",
     })
     assert second.status_code == 400
+
+
+def test_patch_me_updates_locale(client):
+    response = client.patch("/auth/me", json={"locale": "es"})
+    assert response.status_code == 200
+    assert response.json()["locale"] == "es"
+
+
+def test_patch_me_sets_equity_flags(client):
+    response = client.patch("/auth/me", json={
+        "is_socially_disadvantaged": True,
+        "is_beginning_farmer": False,
+    })
+    assert response.status_code == 200
+    body = response.json()
+    assert body["is_socially_disadvantaged"] is True
+    assert body["is_beginning_farmer"] is False
+
+
+def test_patch_me_explicit_null_clears_equity_answer(client):
+    client.patch("/auth/me", json={"is_beginning_farmer": True})
+    response = client.patch("/auth/me", json={"is_beginning_farmer": None})
+    assert response.status_code == 200
+    assert response.json()["is_beginning_farmer"] is None
+
+
+def test_patch_me_omitted_fields_untouched(client):
+    client.patch("/auth/me", json={"locale": "es", "is_beginning_farmer": True})
+    response = client.patch("/auth/me", json={"locale": "en"})
+    body = response.json()
+    assert body["locale"] == "en"
+    assert body["is_beginning_farmer"] is True
+
+
+def test_patch_me_rejects_unknown_locale(client):
+    response = client.patch("/auth/me", json={"locale": "fr"})
+    assert response.status_code == 422
+
+
+def test_patch_me_unauthenticated(unauthed_client):
+    response = unauthed_client.patch("/auth/me", json={"locale": "es"})
+    assert response.status_code == 401

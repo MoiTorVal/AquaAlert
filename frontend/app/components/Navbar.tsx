@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import Logo from "./Logo";
+import LocaleToggle from "./LocaleToggle";
 import { useAuth } from "../context/AuthContext";
 import { logout } from "../lib/api";
 
@@ -51,6 +52,7 @@ export default function Navbar() {
             <Link href="/contact" className={navLink}>
               Contact
             </Link>
+            <LocaleToggle />
             <span className="w-px h-4 bg-white/20" />
             {user ? (
               <button
@@ -112,6 +114,9 @@ export default function Navbar() {
       {/* Mobile menu */}
       {menuOpen && (
         <div className="md:hidden border-t border-white/10 px-8 py-4 flex flex-col gap-2 text-sm font-medium">
+          <div className="px-3 py-1">
+            <LocaleToggle />
+          </div>
           <Link
             href="/"
             className={mobileNavLink}

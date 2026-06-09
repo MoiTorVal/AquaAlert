@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
 
 ET_SIM_JOB_NAME = "daily_et_sim"
 SAVINGS_JOB_NAME = "daily_water_savings"
+REGIONAL_STATS_JOB_NAME = "nightly_regional_stats"
 STALE_ET_DAYS = 7
 
 _scheduler: AsyncIOScheduler | None = None
@@ -199,6 +200,41 @@ def run_savings_job(db: Session | None = None, today: date | None = None) -> mod
             db.close()
 
 
+def run_regional_stats_job(db: Session | None = None, today: date | None = None) -> models.JobRun:
+    """Nightly: aggregate cohort stats for the public /impact dashboard.
+
+    Aggregates only — counts and sums, no farm-identifiable or equity data.
+    """
+    owns_session = db is None
+    if owns_session:
+        db = SessionLocal()
+    if today is None:
+        today = date.today()
+    job_run = crud.create_job_run(db, REGIONAL_STATS_JOB_NAME)
+    try:
+        severity = crud.count_farms_by_severity(db)
+        gallons, kwh, co2 = crud.sum_all_water_savings(db)
+        total_farms = db.query(models.Farm).count()
+        crud.upsert_regional_stats(db, snapshot_date=today, values={
+            "total_farms": total_farms,
+            "farms_green": severity["green"],
+            "farms_yellow": severity["yellow"],
+            "farms_red": severity["red"],
+            "total_gallons_saved": gallons,
+            "total_kwh_saved": kwh,
+            "total_co2_kg_saved": co2,
+        })
+        crud.finish_job_run(db, job_run, JobStatus.SUCCESS, processed=total_farms)
+        return job_run
+    except Exception as exc:
+        logger.exception("%s crashed", REGIONAL_STATS_JOB_NAME)
+        crud.finish_job_run(db, job_run, JobStatus.FAILED, detail=f"unhandled: {exc}"[:2000])
+        raise
+    finally:
+        if owns_session:
+            db.close()
+
+
 def start_scheduler() -> AsyncIOScheduler:
     """Start the daily jobs. ET+sim at 02:00, savings at 03:00 (after ET lands)."""
     global _scheduler
@@ -206,8 +242,10 @@ def start_scheduler() -> AsyncIOScheduler:
         return _scheduler
     _scheduler = AsyncIOScheduler(timezone=settings.scheduler_timezone)
     _scheduler.add_job(run_et_sim_job, CronTrigger(hour=2, minute=0), id=ET_SIM_JOB_NAME)
-    # sync job: APScheduler runs it in a worker thread, off the event loop
+    # sync jobs: APScheduler runs them in worker threads, off the event loop
     _scheduler.add_job(run_savings_job, CronTrigger(hour=3, minute=0), id=SAVINGS_JOB_NAME)
+    # after the savings job so public totals include today's rows
+    _scheduler.add_job(run_regional_stats_job, CronTrigger(hour=4, minute=0), id=REGIONAL_STATS_JOB_NAME)
     _scheduler.start()
     logger.info("Scheduler started (%s, %s)", ET_SIM_JOB_NAME, SAVINGS_JOB_NAME)
     return _scheduler

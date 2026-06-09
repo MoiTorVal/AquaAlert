@@ -2,12 +2,19 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getFarms, type Farm } from "../lib/api";
+import { useRouter } from "next/navigation";
+import { deleteFarm, getFarms, type Farm } from "../lib/api";
+import EditFarmSheet from "../components/EditFarmSheet";
+import CreateFarmSheet from "../components/CreateFarmSheet";
 
 export default function FarmsPage() {
+  const router = useRouter();
   const [farms, setFarms] = useState<Farm[]>([]);
+  const [creating, setCreating] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [editing, setEditing] = useState<Farm | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
     getFarms()
@@ -20,15 +27,48 @@ export default function FarmsPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const handleDelete = async (farm: Farm) => {
+    if (!window.confirm(`Delete "${farm.name}"? This cannot be undone.`)) {
+      return;
+    }
+    setActionError(null);
+    try {
+      await deleteFarm(farm.id);
+      setFarms((prev) => prev.filter((f) => f.id !== farm.id));
+    } catch (err) {
+      setActionError(
+        err instanceof Error ? err.message : "Failed to delete farm",
+      );
+    }
+  };
+
   if (loading) return <FarmsSkeleton />;
   if (error) return <ErrorState message={error} />;
-  if (farms.length === 0) return <EmptyState />;
+  if (farms.length === 0)
+    return (
+      <>
+        <EmptyState onCreate={() => setCreating(true)} />
+        <CreateFarmSheet
+          open={creating}
+          onClose={() => setCreating(false)}
+          onCreated={(farm) => router.push(`/farms/${farm.id}`)}
+        />
+      </>
+    );
 
   return (
     <main className="p-6 max-w-5xl mx-auto">
+      {actionError && (
+        <p role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+          {actionError}
+        </p>
+      )}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">My Farms</h1>
-        <button className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700">
+        <button
+          onClick={() => setCreating(true)}
+          className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700"
+        >
           + Add Farm
         </button>
       </div>
@@ -64,12 +104,15 @@ export default function FarmsPage() {
                   {farm.planting_date ?? "—"}
                 </td>
                 <td className="py-3 flex gap-2">
-                  <button className="text-gray-500 hover:text-gray-800 text-xs border rounded px-2 py-1">
+                  <button
+                    onClick={() => setEditing(farm)}
+                    className="text-gray-500 hover:text-gray-800 text-xs border rounded px-2 py-1"
+                  >
                     Edit
                   </button>
                   <button
-                    className="text-red-500 hover:text-red-700 text-xs border border-red-200 rounded px-2  
-  py-1"
+                    onClick={() => handleDelete(farm)}
+                    className="text-red-500 hover:text-red-700 text-xs border border-red-200 rounded px-2 py-1"
                   >
                     Delete
                   </button>
@@ -97,6 +140,20 @@ export default function FarmsPage() {
           </Link>
         ))}
       </div>
+      <CreateFarmSheet
+        open={creating}
+        onClose={() => setCreating(false)}
+        onCreated={(farm) => router.push(`/farms/${farm.id}`)}
+      />
+      {editing && (
+        <EditFarmSheet
+          farm={editing}
+          onClose={() => setEditing(null)}
+          onSaved={(saved) =>
+            setFarms((prev) => prev.map((f) => (f.id === saved.id ? saved : f)))
+          }
+        />
+      )}
     </main>
   );
 }
@@ -114,14 +171,17 @@ function FarmsSkeleton() {
   );
 }
 
-function EmptyState() {
+function EmptyState({ onCreate }: { onCreate: () => void }) {
   return (
     <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center text-center p-6">
       <h2 className="text-xl font-semibold mb-2">No farms yet</h2>
       <p className="text-gray-400 mb-6">
         Add your first farm to start tracking water stress.
       </p>
-      <button className="bg-gray-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-gray-700">
+      <button
+        onClick={onCreate}
+        className="bg-gray-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-gray-700"
+      >
         + Create your first farm
       </button>
     </div>

@@ -314,6 +314,97 @@ def upsert_water_savings(db: Session, farm_id: int, savings: WaterSavingsBase) -
     )
 
 
+def get_water_savings_series(
+    db: Session, farm_id: int, start_date: date, end_date: date
+) -> list[models.WaterSavings]:
+    return (
+        db.query(models.WaterSavings)
+        .filter(
+            models.WaterSavings.farm_id == farm_id,
+            models.WaterSavings.period_start >= start_date,
+            models.WaterSavings.period_end <= end_date,
+        )
+        .order_by(models.WaterSavings.period_start)
+        .all()
+    )
+
+
+def monthly_extraction_gallons(db: Session, farm_id: int, year: int) -> dict[int, Decimal]:
+    """Month -> total gallons applied, from logged irrigation events."""
+    rows = (
+        db.query(
+            func.extract("month", models.IrrigationEvent.event_date).label("month"),
+            func.sum(models.IrrigationEvent.gallons_applied).label("gallons"),
+        )
+        .filter(
+            models.IrrigationEvent.farm_id == farm_id,
+            models.IrrigationEvent.event_date >= date(year, 1, 1),
+            models.IrrigationEvent.event_date <= date(year, 12, 31),
+        )
+        .group_by("month")
+        .all()
+    )
+    return {int(month): Decimal(gallons) for month, gallons in rows}
+
+
+def count_farms_by_severity(db: Session) -> dict[str, int]:
+    """Severity of each farm's LATEST AquaCropOutput, counted across all farms."""
+    latest = (
+        db.query(
+            models.AquaCropOutput.farm_id,
+            func.max(models.AquaCropOutput.as_of_date).label("max_date"),
+        )
+        .group_by(models.AquaCropOutput.farm_id)
+        .subquery()
+    )
+    rows = (
+        db.query(models.AquaCropOutput.severity, func.count())
+        .join(
+            latest,
+            (models.AquaCropOutput.farm_id == latest.c.farm_id)
+            & (models.AquaCropOutput.as_of_date == latest.c.max_date),
+        )
+        .group_by(models.AquaCropOutput.severity)
+        .all()
+    )
+    counts = {"green": 0, "yellow": 0, "red": 0}
+    for severity, count in rows:
+        if severity is not None:
+            counts[severity.value] = count
+    return counts
+
+
+def sum_all_water_savings(db: Session) -> tuple[Decimal, Decimal, Decimal]:
+    row = db.query(
+        func.coalesce(func.sum(models.WaterSavings.gallons_saved), 0),
+        func.coalesce(func.sum(models.WaterSavings.kwh_saved), 0),
+        func.coalesce(func.sum(models.WaterSavings.co2_kg_saved), 0),
+    ).one()
+    return Decimal(row[0]), Decimal(row[1]), Decimal(row[2])
+
+
+def upsert_regional_stats(db: Session, snapshot_date: date, values: dict) -> models.RegionalStats:
+    stmt = pg_insert(models.RegionalStats).values(snapshot_date=snapshot_date, **values).on_conflict_do_update(
+        index_elements=["snapshot_date"],
+        set_={**values, "computed_at": func.now()},
+    )
+    db.execute(stmt)
+    db.commit()
+    return (
+        db.query(models.RegionalStats)
+        .filter(models.RegionalStats.snapshot_date == snapshot_date)
+        .one()
+    )
+
+
+def get_latest_regional_stats(db: Session) -> models.RegionalStats | None:
+    return (
+        db.query(models.RegionalStats)
+        .order_by(models.RegionalStats.snapshot_date.desc())
+        .first()
+    )
+
+
 def create_job_run(db: Session, job_name: str) -> models.JobRun:
     job_run = models.JobRun(job_name=job_name, status=JobStatus.RUNNING)
     db.add(job_run)

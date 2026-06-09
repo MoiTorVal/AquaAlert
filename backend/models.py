@@ -160,6 +160,27 @@ class WaterSavings(Base):
     )
 
 
+class RegionalStats(Base):
+    """Nightly aggregate snapshot for the public /impact dashboard.
+
+    Aggregates only — no farm-identifiable data and never equity fields
+    (CLAUDE.md invariant: equity self-ID is never exposed in aggregate
+    without anonymization; here it is simply never aggregated at all).
+    """
+    __tablename__ = "regional_stats"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    snapshot_date: Mapped[date] = mapped_column(Date, nullable=False, unique=True)
+    total_farms: Mapped[int] = mapped_column(Integer, nullable=False)
+    farms_green: Mapped[int] = mapped_column(Integer, nullable=False)
+    farms_yellow: Mapped[int] = mapped_column(Integer, nullable=False)
+    farms_red: Mapped[int] = mapped_column(Integer, nullable=False)
+    total_gallons_saved: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
+    total_kwh_saved: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
+    total_co2_kg_saved: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
+    computed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
 class JobRun(Base):
     __tablename__ = "job_runs"
 

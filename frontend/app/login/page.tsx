@@ -9,7 +9,7 @@ import Spinner from "../components/Spinner";
 import { login } from "../lib/api";
 import { LoginFormSchema, type LoginFormValues } from "../lib/validators";
 import { useAuth } from "../context/AuthContext";
-import Link from "next/dist/client/link";
+import Link from "next/link";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -30,7 +30,7 @@ export default function LoginPage() {
     try {
       const data = await login(values);
       setUser(data.user);
-      router.push("/dashboard");
+      router.push("/farms");
     } catch (error) {
       setServerError(
         error instanceof Error ? error.message : "An error occurred",
@@ -87,7 +87,7 @@ export default function LoginPage() {
                 href="/signup"
                 className="hover:text-white transition-colors"
               >
-                Don't have an account? Sign up
+                Don&apos;t have an account? Sign up
               </Link>
             </div>
           </form>
