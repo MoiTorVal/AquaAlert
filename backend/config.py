@@ -13,6 +13,11 @@ class Settings(BaseSettings):
     next_public_api_base_url: str
     allowed_origins: list[str] = ["http://localhost:3000"]
     secure_cookie: bool = False
+    # Opt-in: jobs hit the OpenET quota, so dev/test default to off. Deploy
+    # sets SCHEDULER_ENABLED=true on exactly one single-worker process —
+    # APScheduler has no cross-process lock, N workers = N duplicate runs.
+    scheduler_enabled: bool = False
+    scheduler_timezone: str = "America/Los_Angeles"
 
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=False)
 

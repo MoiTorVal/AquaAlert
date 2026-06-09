@@ -5,7 +5,7 @@ from sqlalchemy import String, Integer, Numeric, DateTime, Date, Boolean, Foreig
 from sqlalchemy.orm import Mapped, mapped_column
 from backend.database import Base
 from geoalchemy2 import Geography
-from backend.enums import SoilTexture, StressSeverity, WaterSource, Locale, Tier, IrrigationSource
+from backend.enums import SoilTexture, StressSeverity, WaterSource, Locale, Tier, IrrigationSource, JobStatus
 
 
 def _enum_values(enum_cls):
@@ -158,3 +158,21 @@ class WaterSavings(Base):
     __table_args__ = (
         UniqueConstraint("farm_id", "period_start", "period_end", name="uq_water_savings_farm_period"),
     )
+
+
+class JobRun(Base):
+    __tablename__ = "job_runs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    job_name: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    status: Mapped[JobStatus] = mapped_column(
+        SAEnum(JobStatus, name="jobstatus", values_callable=_enum_values),
+        nullable=False,
+        server_default=JobStatus.RUNNING.value,
+    )
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    farms_processed: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    farms_failed: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    farms_skipped: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    detail: Mapped[str | None] = mapped_column(String(2000))
