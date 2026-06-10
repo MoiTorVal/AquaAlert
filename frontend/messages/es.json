@@ -162,6 +162,10 @@
     "acreage": "Acres",
     "save": "Crear rancho",
     "saving": "Creando…",
-    "failed": "No se pudo crear el rancho"
+    "failed": "No se pudo crear el rancho",
+    "fieldBoundary": "Límite de la parcela (opcional)",
+    "fieldBoundaryHint": "Acerque el mapa a su parcela y use la herramienta de polígono para trazar sus bordes. Haga clic en el primer punto otra vez para terminar. Los datos satelitales de agua necesitan este límite.",
+    "boundaryCaptured": "✓ Límite capturado",
+    "boundaryPending": "Aún no se ha dibujado el límite"
   }
 }

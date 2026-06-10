@@ -162,6 +162,10 @@
     "acreage": "Acres",
     "save": "Create farm",
     "saving": "Creating…",
-    "failed": "Failed to create farm"
+    "failed": "Failed to create farm",
+    "fieldBoundary": "Field boundary (optional)",
+    "fieldBoundaryHint": "Zoom to your field, then use the polygon tool to trace its edges. Click your first point again to finish. Satellite water data needs this boundary.",
+    "boundaryCaptured": "✓ Boundary captured",
+    "boundaryPending": "No boundary drawn yet"
   }
 }

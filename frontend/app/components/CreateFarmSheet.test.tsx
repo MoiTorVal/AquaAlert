@@ -56,6 +56,7 @@ describe("CreateFarmSheet", () => {
         planting_date: null,
         soil_type: null,
         acreage_acres: null,
+        field_polygon: null,
       });
     });
     expect(props.onCreated).toHaveBeenCalledWith({ id: 42, name: "New Farm" });
