@@ -15,7 +15,7 @@ import {
 // Leaflet requires `window`; load client-side only (see FieldMapDraw.tsx).
 const FieldMapDraw = dynamic(() => import("./FieldMapDraw"), {
   ssr: false,
-  loading: () => <div className="h-64 animate-pulse rounded-xl bg-gray-100" />,
+  loading: () => <div className="h-80 animate-pulse rounded-xl bg-gray-100" />,
 });
 
 export default function CreateFarmSheet({
@@ -71,21 +71,28 @@ export default function CreateFarmSheet({
       aria-modal="true"
       aria-label={t("title")}
     >
-      <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-white p-6 sm:rounded-2xl">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">{t("title")}</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={t("close")}
-            className="text-gray-400 hover:text-gray-600"
-          >
-            ✕
-          </button>
+      {/* Sticky header + footer: the form scrolls, but the title/close and the
+          submit button stay reachable however long the field list grows. */}
+      <div className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-t-2xl bg-white sm:rounded-2xl">
+        <div className="border-b border-gray-100 px-6 pb-4 pt-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">{t("title")}</h2>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label={t("close")}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              ✕
+            </button>
+          </div>
+          <p className="mt-1 text-sm text-gray-500">{t("subtitle")}</p>
         </div>
-        <p className="mt-1 text-sm text-gray-500">{t("subtitle")}</p>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="mt-4 flex flex-col gap-4 text-sm">
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="flex flex-col gap-4 overflow-y-auto px-6 pt-4 text-sm"
+        >
           <label>
             <span className="text-gray-700">{t("name")}</span>
             <input {...register("name")} className={inputClass} />
@@ -154,13 +161,15 @@ export default function CreateFarmSheet({
             </p>
           )}
 
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="rounded-lg bg-green-600 py-3 font-medium text-white hover:bg-green-700 disabled:opacity-50"
-          >
-            {isSubmitting ? t("saving") : t("save")}
-          </button>
+          <div className="sticky bottom-0 -mx-6 mt-2 border-t border-gray-100 bg-white px-6 py-4">
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full rounded-lg bg-green-600 py-3 font-medium text-white hover:bg-green-700 disabled:opacity-50"
+            >
+              {isSubmitting ? t("saving") : t("save")}
+            </button>
+          </div>
         </form>
       </div>
     </div>

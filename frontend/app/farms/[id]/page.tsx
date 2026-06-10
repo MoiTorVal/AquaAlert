@@ -115,7 +115,8 @@ export default function FarmDetailPage({
   const { farm, stress, savings, hasBaseline } = state;
 
   return (
-    <main className="mx-auto max-w-3xl p-6">
+    // pt-28 clears the fixed navbar (matches /impact)
+    <main className="mx-auto max-w-3xl p-6 pt-28">
       <Link href="/farms" className="text-sm text-gray-500 hover:underline">
         {t("back")}
       </Link>
@@ -183,7 +184,7 @@ export default function FarmDetailPage({
 
 function DetailSkeleton() {
   return (
-    <main className="mx-auto max-w-3xl p-6">
+    <main className="mx-auto max-w-3xl p-6 pt-28">
       <div className="h-8 w-48 animate-pulse rounded bg-gray-200" />
       <div className="mt-6 flex flex-col gap-4">
         {[...Array(3)].map((_, i) => (

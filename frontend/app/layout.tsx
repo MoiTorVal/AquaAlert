@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale } from "next-intl/server";
 import Navbar from "./components/Navbar";
-import Footer from "./components/Footer";
+import ConditionalFooter from "./components/ConditionalFooter";
 import { AuthProvider } from "./context/AuthContext";
 import "./globals.css";
 
@@ -39,7 +39,7 @@ export default async function RootLayout({
           <AuthProvider>
             <Navbar />
             {children}
-            <Footer />
+            <ConditionalFooter />
           </AuthProvider>
         </NextIntlClientProvider>
       </body>

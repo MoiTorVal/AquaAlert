@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 import jwt
 from sqlalchemy.exc import IntegrityError
 
+from backend import models
 from backend.auth import create_access_token, SECRET_KEY, ALGORITHM
 from backend.config import settings
 from backend.models import PasswordResetToken
@@ -230,6 +231,58 @@ def test_reset_password_token_single_use(db, unauthed_client, user):
         "new_password": "anotherpass1",
     })
     assert second.status_code == 400
+
+
+def test_reset_password_user_gone_returns_400(db, unauthed_client, user, monkeypatch):
+    """Defensive branch: the FK makes an orphaned token impossible today, but
+    the route must still 400 (not 500) if the user lookup ever comes back empty."""
+    token = _create_reset_token(db, user, timedelta(hours=1))
+
+    class _NoUser:
+        def filter(self, *args, **kwargs):
+            return self
+
+        def first(self):
+            return None
+
+    real_query = db.query
+    monkeypatch.setattr(
+        db, "query",
+        lambda model, *a: _NoUser() if model is models.User else real_query(model, *a),
+    )
+    response = unauthed_client.post("/auth/reset-password", json={
+        "token": token,
+        "new_password": "brandnewpass",
+    })
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Invalid or expired token"
+
+
+# ── logout ───────────────────────────────────────────────────────────────────
+
+
+def test_logout_clears_auth_cookie(unauthed_client):
+    unauthed_client.post("/auth/signup", json={
+        "email": "bye@example.com",
+        "password": "securepass",
+        "name": "Bye",
+    })
+    assert unauthed_client.get("/auth/me").status_code == 200
+
+    response = unauthed_client.post("/auth/logout")
+    assert response.status_code == 200
+    assert response.json()["message"] == "Logged out"
+    set_cookie = response.headers["set-cookie"]
+    assert "access_token=" in set_cookie
+    assert "Max-Age=0" in set_cookie
+    assert "HttpOnly" in set_cookie
+    # the browser-side cookie is gone, so the session is over
+    assert unauthed_client.get("/auth/me").status_code == 401
+
+
+def test_logout_without_session_still_succeeds(unauthed_client):
+    response = unauthed_client.post("/auth/logout")
+    assert response.status_code == 200
 
 
 def test_patch_me_updates_locale(client):

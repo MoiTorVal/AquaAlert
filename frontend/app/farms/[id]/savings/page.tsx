@@ -71,7 +71,7 @@ export default function SavingsPage({
 
   if (state.status === "loading")
     return (
-      <main className="mx-auto max-w-3xl p-6">
+      <main className="mx-auto max-w-3xl p-6 pt-28">
         <div className="h-8 w-48 animate-pulse rounded bg-gray-200" />
         <div className="mt-6 h-64 animate-pulse rounded-2xl bg-gray-100" />
       </main>
@@ -79,7 +79,7 @@ export default function SavingsPage({
 
   if (state.status === "error")
     return (
-      <main className="mx-auto max-w-3xl p-6 text-center">
+      <main className="mx-auto max-w-3xl p-6 pt-28 text-center">
         <h1 className="text-xl font-semibold">{t("errorTitle")}</h1>
         <p className="mt-2 text-sm text-red-500">{state.message}</p>
       </main>
@@ -90,7 +90,7 @@ export default function SavingsPage({
   const nf1 = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 });
 
   return (
-    <main className="mx-auto max-w-3xl p-6">
+    <main className="mx-auto max-w-3xl p-6 pt-28">
       <Link href={`/farms/${farmId}`} className="text-sm text-gray-500 hover:underline">
         {t("back")}
       </Link>

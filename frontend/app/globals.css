@@ -9,3 +9,22 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
+
+/* Soften Leaflet's default square chrome (zoom + leaflet-draw toolbars) to
+   match the app's rounded, shadowed controls. */
+.leaflet-bar,
+.leaflet-touch .leaflet-bar {
+  border: none;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.25);
+  overflow: hidden;
+}
+
+.leaflet-bar a,
+.leaflet-touch .leaflet-bar a {
+  border-bottom-color: #e5e7eb;
+}
+
+.leaflet-container {
+  font-family: var(--font-sans), sans-serif;
+}
