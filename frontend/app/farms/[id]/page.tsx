@@ -2,6 +2,7 @@
 
 import { use, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
   ApiError,
@@ -18,6 +19,12 @@ import StressDetails from "../../components/StressDetails";
 import SavingsCard from "../../components/SavingsCard";
 import IrrigationLogSheet from "../../components/IrrigationLogSheet";
 import FarmSetupCard from "../../components/FarmSetupCard";
+
+// Leaflet requires `window`; load client-side only (see FieldMap.tsx).
+const FieldMap = dynamic(() => import("../../components/FieldMap"), {
+  ssr: false,
+  loading: () => <div className="h-64 animate-pulse rounded-xl bg-gray-100" />,
+});
 
 type LoadState =
   | { status: "loading" }
@@ -138,6 +145,11 @@ export default function FarmDetailPage({
 
         <section className="rounded-2xl border border-gray-200 p-6">
           <h2 className="text-lg font-semibold">{t("field")}</h2>
+          {farm.field_polygon && (
+            <div className="mt-4">
+              <FieldMap wkt={farm.field_polygon} />
+            </div>
+          )}
           <dl className="mt-2 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
             <div>
               <dt className="text-gray-500">{t("crop")}</dt>
