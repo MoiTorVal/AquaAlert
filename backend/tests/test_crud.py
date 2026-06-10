@@ -103,19 +103,6 @@ def test_weather_readings_date_filter(db, farm):
 # ── additional coverage ──────────────────────────────────────────────────────
 
 
-def test_get_weather_reading_by_id(db, farm):
-    created = crud.create_weather_reading(db, make_weather(farm.id))
-    result = crud.get_weather_reading(db, created.id)
-    assert result is not None
-    assert result.id == created.id
-
-
-def test_get_weather_reading_not_found(db):
-    result = crud.get_weather_reading(db, 9999)
-    assert result is None
-
-
-
 def test_count_weather_readings_by_farm(db, farm):
     crud.create_weather_reading(db, make_weather(farm.id, offset_days=0))
     crud.create_weather_reading(db, make_weather(farm.id, offset_days=1))

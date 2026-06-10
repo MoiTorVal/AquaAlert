@@ -40,8 +40,12 @@ export default function FieldMapDraw({
 
 function DrawControl({ onChange }: { onChange: (wkt: string | null) => void }) {
   const map = useMap();
+  // Latest-callback ref: the draw handlers below are bound once, so they read
+  // onChange through a ref kept current outside of render (react-hooks/refs).
   const onChangeRef = useRef(onChange);
-  onChangeRef.current = onChange;
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
 
   useEffect(() => {
     const drawn = new L.FeatureGroup();

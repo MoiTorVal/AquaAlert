@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from backend.database import get_db
 from backend import models
@@ -60,7 +61,16 @@ def signup(request: Request, body: SignupRequest, db: Session = Depends(get_db))
         name=body.name
     )
     db.add(user)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        # Two concurrent signups can both pass the check above; the unique
+        # constraint on email is the real guard.
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already registered"
+        )
     db.refresh(user)
 
     token = create_access_token({"sub": str(user.id)})
@@ -77,10 +87,11 @@ def login(request: Request, body: LoginRequest, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.email == body.email).first()
     if not user or not verify_password(body.password, user.hashed_password):
         raise HTTPException(
-      status_code=status.HTTP_401_UNAUTHORIZED,
-      detail="Invalid email or password"      
-  )
-    
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password"
+        )
+
+
     token = create_access_token({"sub": str(user.id)})
     response = JSONResponse(content={"message": "Login successful", 
                                      "user": UserResponse.model_validate(user).model_dump()},
@@ -93,9 +104,9 @@ def login(request: Request, body: LoginRequest, db: Session = Depends(get_db)):
 def forgot_password(request: Request, body: ForgotPasswordRequest, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.email == body.email).first()
     if user:
-        db.query(models.PasswordResetToken).filter(                                                                  
-          models.PasswordResetToken.user_id == user.id                                                             
-      ).delete()
+        db.query(models.PasswordResetToken).filter(
+            models.PasswordResetToken.user_id == user.id
+        ).delete()
         token = secrets.token_urlsafe(32)
         expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
         reset_token = models.PasswordResetToken(
@@ -105,7 +116,13 @@ def forgot_password(request: Request, body: ForgotPasswordRequest, db: Session =
         )
         db.add(reset_token)
         db.commit()
-        logger.info("Password reset link: http://localhost:3000/reset-password?token=%s", token)
+        if settings.log_reset_links:
+            # Dev-only stand-in until email delivery (SendGrid) ships — a live
+            # credential must never reach production logs.
+            logger.info(
+                "Password reset link: %s/reset-password?token=%s",
+                settings.frontend_base_url, token,
+            )
     return {"message": "If an account with that email exists, a password reset link has been sent."}
 
 @router.post("/reset-password", status_code=status.HTTP_200_OK)
@@ -124,7 +141,7 @@ def reset_password(request: Request, body: ResetPasswordRequest, db: Session = D
         raise HTTPException(status_code=400, detail="Invalid or expired token")
 
     user.hashed_password = hash_password(body.new_password)
-    user.password_changed_at = now 
+    user.password_changed_at = now
     db.query(models.PasswordResetToken).filter_by(user_id=user.id).delete()
     db.commit()
 

@@ -262,12 +262,24 @@ def test_savings_job_skips_farm_without_baseline(db, sim_farm):
 def test_savings_job_no_pump_lift_zero_energy(db, user):
     farm = crud.create_farm(db, FarmCreate(name="No pump", planting_date=START), user_id=user.id)
     crud.create_baseline_irrigation(db, farm.id, BaselineIrrigationCreate(gallons_per_week_estimate=Decimal("7000")))
+    crud.create_irrigation_event(db, farm.id, IrrigationEventCreate(event_date=date(2026, 6, 2), gallons_applied=Decimal("2000")))
     run_savings_job(db=db, today=TODAY)
 
     row = db.query(models.WaterSavings).filter_by(farm_id=farm.id).one()
-    assert row.gallons_saved == Decimal("7000.00")
+    assert row.gallons_saved == Decimal("5000.00")
     assert row.kwh_saved == Decimal("0.00")
     assert row.co2_kg_saved == Decimal("0.00")
+
+
+def test_savings_job_skips_week_with_no_logged_events(db, sim_farm):
+    """Grant integrity: silence must not book the whole baseline as savings."""
+    crud.create_baseline_irrigation(db, sim_farm.id, BaselineIrrigationCreate(gallons_per_week_estimate=Decimal("7000")))
+    job_run = run_savings_job(db=db, today=TODAY)
+
+    assert job_run.status == JobStatus.SUCCESS
+    assert job_run.farms_skipped == 1
+    assert "no irrigation logged" in job_run.detail
+    assert db.query(models.WaterSavings).count() == 0
 
 
 # ── failure paths + session ownership ────────────────────────────────────────
@@ -296,6 +308,7 @@ def test_et_sim_job_unhandled_crash_records_failure(db, sim_farm, monkeypatch):
 
 def test_savings_job_per_farm_error_continues(db, sim_farm, monkeypatch):
     crud.create_baseline_irrigation(db, sim_farm.id, BaselineIrrigationCreate(gallons_per_week_estimate=Decimal("7000")))
+    crud.create_irrigation_event(db, sim_farm.id, IrrigationEventCreate(event_date=date(2026, 6, 2), gallons_applied=Decimal("1000")))
     monkeypatch.setattr(crud, "sum_irrigation_gallons", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("db hiccup")))
     job_run = run_savings_job(db=db, today=TODAY)
     assert job_run.status == JobStatus.FAILED

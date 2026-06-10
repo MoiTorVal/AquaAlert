@@ -5,7 +5,7 @@ import pytest
 from shapely import wkt as shapely_wkt
 
 from backend.models import User, WaterSavings
-from backend import crud
+from backend import crud, models
 from backend.schemas import FarmCreate
 
 POLYGON_WKT = "POLYGON ((-120.5 36.5, -120.4 36.5, -120.4 36.6, -120.5 36.6, -120.5 36.5))"
@@ -103,7 +103,7 @@ def test_forgot_password_unregistered_email(unauthed_client):
 
 def test_create_farm_route(client):
     response = client.post("/farms/", json={"name": "New Farm", "crop_type": "wheat"})
-    assert response.status_code == 200
+    assert response.status_code == 201
     assert response.json()["name"] == "New Farm"
 
 
@@ -157,6 +157,25 @@ def test_delete_farm_route(client, farm):
     response = client.delete(f"/farms/{farm.id}")
     assert response.status_code == 200
     assert client.get(f"/farms/{farm.id}").status_code == 404
+
+
+def test_delete_farm_with_children_cascades(client, db, farm):
+    """Regression: child rows used to raise IntegrityError (500) on delete."""
+    client.post(
+        f"/farms/{farm.id}/irrigation-events",
+        json={"event_date": "2026-06-01", "gallons_applied": "1500.00"},
+    )
+    client.post(
+        f"/farms/{farm.id}/baseline-irrigations",
+        json={"gallons_per_week_estimate": "5000.00"},
+    )
+    _add_water_savings(db, farm.id, date(2026, 5, 1), date(2026, 5, 31))
+
+    response = client.delete(f"/farms/{farm.id}")
+    assert response.status_code == 200
+    assert db.query(models.IrrigationEvent).filter_by(farm_id=farm.id).count() == 0
+    assert db.query(models.BaselineIrrigation).filter_by(farm_id=farm.id).count() == 0
+    assert db.query(WaterSavings).filter_by(farm_id=farm.id).count() == 0
 
 
 def test_delete_farm_not_found_route(client):
@@ -250,7 +269,7 @@ def test_list_negative_skip_rejected(client, farm, path):
 
 def test_create_farm_with_polygon_returns_wkt(client):
     response = client.post("/farms/", json={"name": "Poly Farm", "field_polygon": POLYGON_WKT})
-    assert response.status_code == 200
+    assert response.status_code == 201
     returned = response.json()["field_polygon"]
     assert shapely_wkt.loads(returned).equals(shapely_wkt.loads(POLYGON_WKT))
 
@@ -270,7 +289,7 @@ def test_log_irrigation_event(client, farm):
         f"/farms/{farm.id}/irrigation-events",
         json={"event_date": "2026-06-01", "gallons_applied": "1500.00"},
     )
-    assert response.status_code == 200
+    assert response.status_code == 201
     data = response.json()
     assert data["farm_id"] == farm.id
     assert data["source"] == "user_log"

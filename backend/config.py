@@ -8,10 +8,14 @@ class Settings(BaseSettings):
     db_host: str
     db_name: str
     db_port: int
-    openweather_api_key: SecretStr
     openet_api_key: SecretStr | None = None
     next_public_api_base_url: str
     allowed_origins: list[str] = ["http://localhost:3000"]
+    # Used to build links sent (or, in dev, logged) to users.
+    frontend_base_url: str = "http://localhost:3000"
+    # Dev-only: log password-reset links until email delivery ships. Never
+    # enable in production — the token is a live credential.
+    log_reset_links: bool = False
     secure_cookie: bool = False
     # Opt-in: jobs hit the OpenET quota, so dev/test default to off. Deploy
     # sets SCHEDULER_ENABLED=true on exactly one single-worker process —

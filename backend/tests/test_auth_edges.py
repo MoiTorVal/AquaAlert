@@ -1,10 +1,38 @@
+import logging
 from datetime import datetime, timedelta, timezone
 
 import jwt
+from sqlalchemy.exc import IntegrityError
 
 from backend.auth import create_access_token, SECRET_KEY, ALGORITHM
+from backend.config import settings
 from backend.models import PasswordResetToken
 from backend.routers.auth import hash_token
+
+
+def test_signup_password_too_short(unauthed_client):
+    response = unauthed_client.post("/auth/signup", json={
+        "email": "short@example.com",
+        "password": "short",
+        "name": "Short Pass",
+    })
+    assert response.status_code == 422
+
+
+def test_signup_race_duplicate_email_returns_400(unauthed_client, db, monkeypatch):
+    """Two concurrent signups can both pass the existence check; the unique
+    constraint fires on commit and must surface as 400, not 500."""
+    def conflict():
+        raise IntegrityError("INSERT INTO users", {}, Exception("duplicate key"))
+
+    monkeypatch.setattr(db, "commit", conflict)
+    response = unauthed_client.post("/auth/signup", json={
+        "email": "race@example.com",
+        "password": "securepass",
+        "name": "Racer",
+    })
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Email already registered"
 
 
 def test_signup_invalid_email(unauthed_client):
@@ -64,6 +92,63 @@ def test_token_deleted_user_rejected(unauthed_client):
     assert response.status_code == 401
 
 
+# ── iat / password-reset token invalidation ──────────────────────────────────
+
+
+def _backdated_token(user_id, minutes):
+    now = datetime.now(timezone.utc)
+    return jwt.encode(
+        {"sub": str(user_id), "iat": now - timedelta(minutes=minutes), "exp": now + timedelta(hours=2)},
+        SECRET_KEY,
+        algorithm=ALGORITHM,
+    )
+
+
+def test_create_access_token_sets_iat():
+    payload = jwt.decode(create_access_token({"sub": "1"}), SECRET_KEY, algorithms=[ALGORITHM])
+    assert abs(payload["iat"] - datetime.now(timezone.utc).timestamp()) < 5
+
+
+def test_token_issued_before_password_reset_rejected(db, unauthed_client, user):
+    old_token = _backdated_token(user.id, minutes=10)
+    token = _create_reset_token(db, user, timedelta(hours=1))
+    response = unauthed_client.post("/auth/reset-password", json={
+        "token": token,
+        "new_password": "brandnewpass",
+    })
+    assert response.status_code == 200
+
+    unauthed_client.cookies.set("access_token", old_token)
+    assert unauthed_client.get("/auth/me").status_code == 401
+
+
+def test_fresh_token_after_password_reset_accepted(db, unauthed_client, user):
+    token = _create_reset_token(db, user, timedelta(hours=1))
+    unauthed_client.post("/auth/reset-password", json={
+        "token": token,
+        "new_password": "brandnewpass",
+    })
+    # login immediately after the reset — must not trip the iat guard even
+    # within the same second (iat is truncated to whole seconds)
+    login = unauthed_client.post("/auth/login", json={
+        "email": user.email,
+        "password": "brandnewpass",
+    })
+    assert login.status_code == 200
+    assert unauthed_client.get("/auth/me").status_code == 200
+
+
+def test_legacy_token_without_iat_still_accepted(unauthed_client, user):
+    """Tokens minted before the iat claim shipped stay valid until expiry."""
+    token = jwt.encode(
+        {"sub": str(user.id), "exp": datetime.now(timezone.utc) + timedelta(hours=2)},
+        SECRET_KEY,
+        algorithm=ALGORITHM,
+    )
+    unauthed_client.cookies.set("access_token", token)
+    assert unauthed_client.get("/auth/me").status_code == 200
+
+
 # ── reset password ───────────────────────────────────────────────────────────
 
 
@@ -110,6 +195,27 @@ def test_reset_password_unknown_token(unauthed_client):
     })
     assert response.status_code == 400
     assert response.json()["detail"] == "Invalid or expired token"
+
+
+def test_reset_password_too_short_rejected(db, unauthed_client, user):
+    token = _create_reset_token(db, user, timedelta(hours=1))
+    response = unauthed_client.post("/auth/reset-password", json={
+        "token": token,
+        "new_password": "short",
+    })
+    assert response.status_code == 422
+
+
+def test_forgot_password_logs_link_only_when_enabled(unauthed_client, user, monkeypatch, caplog):
+    monkeypatch.setattr(settings, "log_reset_links", False)
+    with caplog.at_level(logging.INFO, logger="backend.routers.auth"):
+        unauthed_client.post("/auth/forgot-password", json={"email": user.email})
+    assert "reset-password?token=" not in caplog.text
+
+    monkeypatch.setattr(settings, "log_reset_links", True)
+    with caplog.at_level(logging.INFO, logger="backend.routers.auth"):
+        unauthed_client.post("/auth/forgot-password", json={"email": user.email})
+    assert f"{settings.frontend_base_url}/reset-password?token=" in caplog.text
 
 
 def test_reset_password_token_single_use(db, unauthed_client, user):

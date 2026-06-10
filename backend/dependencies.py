@@ -38,8 +38,10 @@ def get_current_user(access_token: str | None = Cookie(default=None), db: Sessio
     if user is None:
         raise credentials_exception
     
+    # JWT iat has whole-second precision; truncate the DB timestamp the same
+    # way so a token minted in the same second as the reset isn't rejected.
     iat = payload.get("iat")
-    if user.password_changed_at and iat and user.password_changed_at.timestamp() > iat:
+    if user.password_changed_at and iat is not None and int(user.password_changed_at.timestamp()) > iat:
         raise credentials_exception
 
     return user

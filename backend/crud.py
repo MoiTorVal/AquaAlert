@@ -51,9 +51,6 @@ def create_weather_reading(db: Session, weather_reading: WeatherReadingCreate) -
     db.refresh(db_weather_reading)
     return db_weather_reading
 
-def get_weather_reading(db: Session, weather_reading_id: int) -> models.WeatherReading | None:
-    return db.query(models.WeatherReading).filter(models.WeatherReading.id == weather_reading_id).first()
-
 def _weather_readings_base_query(db: Session, farm_id: int, start_date: datetime | None, end_date: datetime | None) -> Query:
     query = db.query(models.WeatherReading).filter(models.WeatherReading.farm_id == farm_id)
     if start_date:

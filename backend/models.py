@@ -38,7 +38,7 @@ class WeatherReading(Base):
     __tablename__ = "weather_readings"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    farm_id: Mapped[int] = mapped_column(Integer, ForeignKey("farms.id"), nullable=False)
+    farm_id: Mapped[int] = mapped_column(Integer, ForeignKey("farms.id", ondelete="CASCADE"), nullable=False)
     recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     location: Mapped[str | None] = mapped_column(String(255))
     temperature_c: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
@@ -61,7 +61,9 @@ class Farm(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     area_hectares: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
     crop_type: Mapped[str | None] = mapped_column(String(100))
-    soil_type: Mapped[SoilTexture | None] = mapped_column(SAEnum(SoilTexture, name="soiltexture"), nullable=True)
+    soil_type: Mapped[SoilTexture | None] = mapped_column(
+        SAEnum(SoilTexture, name="soiltexture", values_callable=_enum_values), nullable=True
+    )
     root_depth_cm: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
     growth_stage: Mapped[str | None] = mapped_column(String(50))
     planting_date: Mapped[date | None] = mapped_column(Date)
@@ -87,22 +89,22 @@ class PasswordResetToken(Base):
 class ETReading(Base):
     __tablename__ = "et_readings"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)                                       
-    farm_id: Mapped[int] = mapped_column(Integer, ForeignKey("farms.id"), nullable=False)
-    reading_date: Mapped[date] = mapped_column(Date, nullable=False)                                                     
-    et_mm: Mapped[Decimal] = mapped_column(Numeric(6, 2), nullable=False)                                        
-    source: Mapped[str] = mapped_column(String(50), nullable=False)      
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    farm_id: Mapped[int] = mapped_column(Integer, ForeignKey("farms.id", ondelete="CASCADE"), nullable=False)
+    reading_date: Mapped[date] = mapped_column(Date, nullable=False)
+    et_mm: Mapped[Decimal] = mapped_column(Numeric(6, 2), nullable=False)
+    source: Mapped[str] = mapped_column(String(50), nullable=False)
     fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     __table_args__ = (
-        UniqueConstraint("farm_id", "reading_date", name="uq_et_farm_date"),                                             
-    ) 
+        UniqueConstraint("farm_id", "reading_date", name="uq_et_farm_date"),
+    )
 
 class AquaCropOutput(Base):
     __tablename__ = "aquacrop_outputs"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    farm_id: Mapped[int] = mapped_column(Integer, ForeignKey("farms.id"), nullable=False)
+    farm_id: Mapped[int] = mapped_column(Integer, ForeignKey("farms.id", ondelete="CASCADE"), nullable=False)
     run_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     as_of_date: Mapped[date] = mapped_column(Date, nullable=False)
     depletion_mm: Mapped[Decimal | None] = mapped_column(Numeric(6, 2))
@@ -122,7 +124,7 @@ class IrrigationEvent(Base):
     __tablename__ = "irrigation_events"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    farm_id: Mapped[int] = mapped_column(Integer, ForeignKey("farms.id"), nullable=False)
+    farm_id: Mapped[int] = mapped_column(Integer, ForeignKey("farms.id", ondelete="CASCADE"), nullable=False)
     event_date: Mapped[date] = mapped_column(Date, nullable=False)
     gallons_applied: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     source: Mapped[IrrigationSource] = mapped_column(
@@ -136,7 +138,7 @@ class BaselineIrrigation(Base):
     __tablename__ = "baseline_irrigations"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    farm_id: Mapped[int] = mapped_column(Integer, ForeignKey("farms.id"), nullable=False)
+    farm_id: Mapped[int] = mapped_column(Integer, ForeignKey("farms.id", ondelete="CASCADE"), nullable=False)
     gallons_per_week_estimate: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
@@ -145,7 +147,7 @@ class WaterSavings(Base):
     __tablename__ = "water_savings"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    farm_id: Mapped[int] = mapped_column(Integer, ForeignKey("farms.id"), nullable=False)
+    farm_id: Mapped[int] = mapped_column(Integer, ForeignKey("farms.id", ondelete="CASCADE"), nullable=False)
     period_start: Mapped[date] = mapped_column(Date, nullable=False)
     period_end: Mapped[date] = mapped_column(Date, nullable=False)
     baseline_gallons: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)

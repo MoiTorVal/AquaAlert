@@ -160,6 +160,15 @@ def run_savings_job(db: Session | None = None, today: date | None = None) -> mod
                 skipped += 1
                 notes.append(f"farm {farm.id}: no baseline")
                 continue
+            # Grant-report integrity: a week with no logged irrigation would
+            # book the full baseline as "saved" — a farmer who stops using the
+            # app would generate maximum savings. Skip the week instead.
+            if crud.count_irrigation_events_by_farm(
+                db, farm.id, start_date=period_start, end_date=period_end
+            ) == 0:
+                skipped += 1
+                notes.append(f"farm {farm.id}: no irrigation logged this week")
+                continue
             try:
                 actual = crud.sum_irrigation_gallons(db, farm.id, period_start, period_end)
                 gallons_saved = baseline.gallons_per_week_estimate - actual

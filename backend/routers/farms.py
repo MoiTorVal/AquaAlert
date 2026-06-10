@@ -36,7 +36,7 @@ def _validate_farm_ownership(db: Session, farm_id: int, user_id: int):
         raise HTTPException(status_code=404, detail="Farm not found")
     return db_farm
 
-@router.post("/", response_model=FarmResponse)
+@router.post("/", response_model=FarmResponse, status_code=status.HTTP_201_CREATED)
 def create_farm(farm: FarmCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     return crud.create_farm(db=db, farm=farm, user_id=current_user.id)
 
@@ -83,7 +83,11 @@ def read_weather_readings_by_farm(
     return PaginatedWeatherResponse(total=total, skip=skip, limit=limit, results=[WeatherReadingResponse.model_validate(r) for r in results])
 
 
-@router.post("/{farm_id}/irrigation-events", response_model=IrrigationEventResponse)
+@router.post(
+    "/{farm_id}/irrigation-events",
+    response_model=IrrigationEventResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 def log_irrigation_event(
     farm_id: int,
     event: IrrigationEventCreate,

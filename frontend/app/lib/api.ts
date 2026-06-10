@@ -256,8 +256,10 @@ export async function updateMe(body: {
   return request(UserSchema, "/auth/me", { method: "PATCH", body });
 }
 
+// limit=100 is the backend's pagination cap; without it the API defaults to
+// 10 and farms past the first page silently vanish from the UI.
 export async function getFarms(): Promise<Farm[]> {
-  return request(FarmsListSchema, "/farms");
+  return request(FarmsListSchema, "/farms/?limit=100");
 }
 
 export async function createFarm(
