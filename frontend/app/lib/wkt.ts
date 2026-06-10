@@ -13,3 +13,16 @@ export function parseWktPolygon(wkt: string): [number, number][] | null {
   }
   return coords.length >= 4 ? coords : null;
 }
+
+// Inverse of parseWktPolygon: Leaflet [lat, lng] ring (open or closed)
+// → WKT POLYGON with a closed lon-lat ring, as the backend expects.
+export function toWktPolygon(latLngs: [number, number][]): string | null {
+  if (latLngs.length < 3) return null;
+  const ring = [...latLngs];
+  const first = ring[0];
+  const last = ring[ring.length - 1];
+  if (!first || !last) return null;
+  if (first[0] !== last[0] || first[1] !== last[1]) ring.push(first);
+  const pairs = ring.map(([lat, lng]) => `${lng} ${lat}`).join(", ");
+  return `POLYGON ((${pairs}))`;
+}

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import dynamic from "next/dynamic";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createFarm, type Farm } from "../lib/api";
@@ -10,6 +11,12 @@ import {
   SOIL_TEXTURES,
   type CreateFarmFormValues,
 } from "../lib/validators";
+
+// Leaflet requires `window`; load client-side only (see FieldMapDraw.tsx).
+const FieldMapDraw = dynamic(() => import("./FieldMapDraw"), {
+  ssr: false,
+  loading: () => <div className="h-64 animate-pulse rounded-xl bg-gray-100" />,
+});
 
 export default function CreateFarmSheet({
   open,
@@ -22,6 +29,7 @@ export default function CreateFarmSheet({
 }) {
   const t = useTranslations("createFarm");
   const [serverError, setServerError] = useState<string | null>(null);
+  const [fieldPolygon, setFieldPolygon] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
@@ -44,8 +52,10 @@ export default function CreateFarmSheet({
         planting_date: values.planting_date || null,
         soil_type: values.soil_type || null,
         acreage_acres: values.acreage_acres ? Number(values.acreage_acres) : null,
+        field_polygon: fieldPolygon,
       });
       reset();
+      setFieldPolygon(null);
       onCreated(farm);
     } catch (err) {
       setServerError(err instanceof Error ? err.message : t("failed"));
@@ -122,6 +132,20 @@ export default function CreateFarmSheet({
                 </span>
               )}
             </label>
+          </div>
+
+          <div>
+            <span className="text-gray-700">{t("fieldBoundary")}</span>
+            <p className="mt-1 text-xs text-gray-500">{t("fieldBoundaryHint")}</p>
+            <div className="mt-2">
+              <FieldMapDraw onChange={setFieldPolygon} />
+            </div>
+            <p
+              role="status"
+              className={`mt-1 text-xs ${fieldPolygon ? "text-green-700" : "text-gray-400"}`}
+            >
+              {fieldPolygon ? t("boundaryCaptured") : t("boundaryPending")}
+            </p>
           </div>
 
           {serverError && (
