@@ -57,7 +57,8 @@ export default function FarmsPage() {
     );
 
   return (
-    <main className="p-6 max-w-5xl mx-auto">
+    // pt-28 clears the fixed navbar (matches /impact)
+    <main className="p-6 pt-28 max-w-5xl mx-auto">
       {actionError && (
         <p role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">
           {actionError}
@@ -76,18 +77,18 @@ export default function FarmsPage() {
         <table className="w-full text-sm border-collapse">
           <thead>
             <tr className="border-b text-left text-gray-500">
-              <th className="pb-3 font-medium">Name</th>
-              <th className="pb-3 font-medium">Crop</th>
-              <th className="pb-3 font-medium">Location</th>
-              <th className="pb-3 font-medium">Area (ha)</th>
-              <th className="pb-3 font-medium">Planted</th>
-              <th className="pb-3 font-medium">Actions</th>
+              <th className="px-3 pb-3 font-medium">Name</th>
+              <th className="px-3 pb-3 font-medium">Crop</th>
+              <th className="px-3 pb-3 font-medium">Location</th>
+              <th className="px-3 pb-3 font-medium">Acres</th>
+              <th className="px-3 pb-3 font-medium">Planted</th>
+              <th className="px-3 pb-3 font-medium">Actions</th>
             </tr>
           </thead>
           <tbody>
             {farms.map((farm) => (
               <tr key={farm.id} className="border-b hover:bg-gray-50">
-                <td className="py-3">
+                <td className="px-3 py-3">
                   <Link
                     href={`/farms/${farm.id}`}
                     className="font-medium text-green-700 hover:underline"
@@ -95,15 +96,15 @@ export default function FarmsPage() {
                     {farm.name}
                   </Link>
                 </td>
-                <td className="py-3 text-gray-600">{farm.crop_type ?? "—"}</td>
-                <td className="py-3 text-gray-600">{farm.location ?? "—"}</td>
-                <td className="py-3 text-gray-600">
-                  {farm.area_hectares ?? "—"}
+                <td className="px-3 py-3 text-gray-600">{farm.crop_type ?? "—"}</td>
+                <td className="px-3 py-3 text-gray-600">{farm.location ?? "—"}</td>
+                <td className="px-3 py-3 text-gray-600">
+                  {farm.acreage_acres ?? "—"}
                 </td>
-                <td className="py-3 text-gray-600">
+                <td className="px-3 py-3 text-gray-600">
                   {farm.planting_date ?? "—"}
                 </td>
-                <td className="py-3 flex gap-2">
+                <td className="px-3 py-3 flex gap-2">
                   <button
                     onClick={() => setEditing(farm)}
                     className="text-gray-500 hover:text-gray-800 text-xs border rounded px-2 py-1"
@@ -134,7 +135,7 @@ export default function FarmsPage() {
               {farm.crop_type ?? "No crop"} · {farm.location ?? "No location"}
             </div>
             <div className="text-sm text-gray-400 mt-1">
-              {farm.area_hectares ? `${farm.area_hectares} ha` : "Area unknown"}{" "}
+              {farm.acreage_acres ? `${farm.acreage_acres} ac` : "Area unknown"}{" "}
               · Planted {farm.planting_date ?? "unknown"}
             </div>
           </Link>
@@ -160,7 +161,7 @@ export default function FarmsPage() {
 
 function FarmsSkeleton() {
   return (
-    <main className="p-6 max-w-5xl mx-auto">
+    <main className="p-6 pt-28 max-w-5xl mx-auto">
       <div className="h-8 w-32 bg-gray-200 rounded animate-pulse mb-6" />
       <div className="flex flex-col gap-3">
         {[...Array(4)].map((_, i) => (

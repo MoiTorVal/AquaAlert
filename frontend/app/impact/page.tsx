@@ -27,7 +27,7 @@ export default function ImpactPage() {
 
   if (state.status === "loading")
     return (
-      <main className="mx-auto max-w-3xl p-6">
+      <main className="mx-auto max-w-3xl p-6 pt-28">
         <div className="mt-8 h-48 animate-pulse rounded-2xl bg-gray-100" />
       </main>
     );

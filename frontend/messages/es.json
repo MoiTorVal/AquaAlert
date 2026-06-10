@@ -167,5 +167,10 @@
     "fieldBoundaryHint": "Acerque el mapa a su parcela y use la herramienta de polígono para trazar sus bordes. Haga clic en el primer punto otra vez para terminar. Los datos satelitales de agua necesitan este límite.",
     "boundaryCaptured": "✓ Límite capturado",
     "boundaryPending": "Aún no se ha dibujado el límite"
+  },
+  "fieldMap": {
+    "locate": "Buscar mi parcela",
+    "locating": "Buscando…",
+    "locateError": "No se pudo obtener su ubicación — acerque el mapa a su parcela manualmente."
   }
 }

@@ -3,6 +3,7 @@
 import "leaflet/dist/leaflet.css";
 import { latLngBounds } from "leaflet";
 import { MapContainer, Polygon, TileLayer } from "react-leaflet";
+import { IMAGERY_ATTRIBUTION, IMAGERY_URL, LABELS_URL } from "../lib/mapTiles";
 import { parseWktPolygon } from "../lib/wkt";
 
 // Leaflet touches `window` at import time, so this component must only be
@@ -20,11 +21,12 @@ export default function FieldMap({ wkt }: { wkt: string }) {
         scrollWheelZoom={false}
         className="h-full w-full"
       >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        <TileLayer attribution={IMAGERY_ATTRIBUTION} url={IMAGERY_URL} />
+        <TileLayer url={LABELS_URL} />
+        <Polygon
+          positions={positions}
+          pathOptions={{ color: "#16a34a", weight: 3, fillOpacity: 0.15 }}
         />
-        <Polygon positions={positions} pathOptions={{ color: "#16a34a" }} />
       </MapContainer>
     </div>
   );
