@@ -12,10 +12,21 @@ from backend.main import app
 from backend.database import get_db
 from backend.models import User
 from backend.auth import create_access_token
+from backend.rate_limit import limiter
 from backend import crud
 from backend.schemas import FarmCreate
 
 os.environ.setdefault("SECRET_KEY", "test-secret-key-that-is-long-enough-for-hs256")
+
+
+@pytest.fixture(autouse=True)
+def _disable_rate_limit():
+    """Rate limiting off by default so the suite can fire many requests.
+    The rate-limit test re-enables it explicitly."""
+    limiter.enabled = False
+    limiter.reset()
+    yield
+    limiter.enabled = False
 
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 

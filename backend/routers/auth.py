@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from backend.database import get_db
@@ -11,7 +11,13 @@ from backend.schemas import (
     UserUpdateRequest,
     ResetPasswordRequest
 )
-from backend.auth import hash_password, verify_password, create_access_token
+from backend.auth import (
+    ACCESS_TOKEN_EXPIRE_MINUTES,
+    create_access_token,
+    hash_password,
+    verify_password,
+)
+from backend.rate_limit import AUTH_WRITE_LIMIT, limiter
 import logging
 from backend.config import settings
 from backend.dependencies import get_current_user
@@ -31,14 +37,16 @@ def _set_auth_cookie(response: JSONResponse, token: str):
         httponly=True,
         secure=settings.secure_cookie,
         samesite="lax",
-        max_age=60 * 60 * 24
+        # Match the JWT lifetime so the cookie can't outlive the token.
+        max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
     )
 
 def hash_token(token: str) -> str:
     return hashlib.sha256(token.encode('utf-8')).hexdigest()
 
 @router.post("/signup", status_code=status.HTTP_201_CREATED)
-def signup(body: SignupRequest, db: Session = Depends(get_db)):
+@limiter.limit(AUTH_WRITE_LIMIT)
+def signup(request: Request, body: SignupRequest, db: Session = Depends(get_db)):
     existing = db.query(models.User).filter(models.User.email == body.email).first()
     if existing:
         raise HTTPException(
@@ -64,7 +72,8 @@ def signup(body: SignupRequest, db: Session = Depends(get_db)):
     return response
 
 @router.post("/login", status_code=status.HTTP_200_OK)
-def login(body: LoginRequest, db: Session = Depends(get_db)):
+@limiter.limit(AUTH_WRITE_LIMIT)
+def login(request: Request, body: LoginRequest, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.email == body.email).first()
     if not user or not verify_password(body.password, user.hashed_password):
         raise HTTPException(
@@ -80,7 +89,8 @@ def login(body: LoginRequest, db: Session = Depends(get_db)):
     return response
 
 @router.post("/forgot-password", status_code=status.HTTP_200_OK)
-def forgot_password(body: ForgotPasswordRequest, db: Session = Depends(get_db)):
+@limiter.limit(AUTH_WRITE_LIMIT)
+def forgot_password(request: Request, body: ForgotPasswordRequest, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.email == body.email).first()
     if user:
         db.query(models.PasswordResetToken).filter(                                                                  
@@ -99,7 +109,8 @@ def forgot_password(body: ForgotPasswordRequest, db: Session = Depends(get_db)):
     return {"message": "If an account with that email exists, a password reset link has been sent."}
 
 @router.post("/reset-password", status_code=status.HTTP_200_OK)
-def reset_password(body: ResetPasswordRequest, db: Session = Depends(get_db)):
+@limiter.limit(AUTH_WRITE_LIMIT)
+def reset_password(request: Request, body: ResetPasswordRequest, db: Session = Depends(get_db)):
     reset_token = db.query(models.PasswordResetToken).filter(
         models.PasswordResetToken.token == hash_token(body.token)
     ).first()

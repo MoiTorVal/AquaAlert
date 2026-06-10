@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     # APScheduler has no cross-process lock, N workers = N duplicate runs.
     scheduler_enabled: bool = False
     scheduler_timezone: str = "America/Los_Angeles"
+    # Per-IP request throttling (slowapi). Disable in tests so the suite
+    # can fire many requests without tripping 429s.
+    rate_limit_enabled: bool = True
 
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=False)
 
