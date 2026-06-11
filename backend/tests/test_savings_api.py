@@ -1,3 +1,5 @@
+import csv
+import io
 from datetime import date
 from decimal import Decimal
 
@@ -117,6 +119,40 @@ def test_sgma_rejects_bad_format(client, farm):
 def test_sgma_unauthenticated(unauthed_client, farm):
     response = unauthed_client.get(f"/farms/{farm.id}/sgma-export?year=2026")
     assert response.status_code == 401
+
+
+def test_sgma_csv_neutralizes_formula_injection(client, db):
+    # The export is opened by GSA staff in Excel — a farm name must never
+    # become an executable formula (CWE-1236) or inject CSV rows.
+    create = client.post(
+        "/farms/", json={"name": '=HYPERLINK("http://evil",1)\nTOTAL,999,999'}
+    )
+    assert create.status_code == 201
+    farm_id = create.json()["id"]
+    _log_events(db, farm_id)
+
+    response = client.get(f"/farms/{farm_id}/sgma-export?year=2026&format=csv")
+    assert response.status_code == 200
+    text = response.text
+    assert "'=HYPERLINK" in text  # formula char defused with apostrophe
+    for row in csv.reader(io.StringIO(text)):
+        for cell in row:
+            assert not cell.startswith(("=", "+", "@"))
+    # real totals row still intact despite the injected "TOTAL" line
+    assert "TOTAL,475851.00," in text
+
+
+def test_sgma_pdf_escapes_markup_in_farm_name(client, db):
+    # reportlab Paragraph parses XML-ish tags; unescaped user text crashes
+    # the build (500) on malformed markup.
+    create = client.post("/farms/", json={"name": "Farm <foo> & Sons"})
+    assert create.status_code == 201
+    farm_id = create.json()["id"]
+    _log_events(db, farm_id)
+
+    response = client.get(f"/farms/{farm_id}/sgma-export?year=2026&format=pdf")
+    assert response.status_code == 200
+    assert response.content[:5] == b"%PDF-"
 
 
 # ── regional stats job + public endpoint ─────────────────────────────────────
