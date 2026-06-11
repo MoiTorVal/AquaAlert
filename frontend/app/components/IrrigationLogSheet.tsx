@@ -62,7 +62,8 @@ export default function IrrigationLogSheet({
 
   return (
     <div
-      className="fixed inset-0 z-20 flex items-end justify-center bg-black/40 sm:items-center"
+      // z-[60] keeps the dialog above the fixed navbar (z-50)
+      className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 sm:items-center"
       role="dialog"
       aria-modal="true"
       aria-label={t("title")}

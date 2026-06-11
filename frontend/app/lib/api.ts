@@ -128,6 +128,13 @@ export const IrrigationEventSchema = z.object({
   logged_at: z.string(),
 });
 
+export const PaginatedIrrigationEventsSchema = z.object({
+  total: z.number(),
+  skip: z.number(),
+  limit: z.number(),
+  results: z.array(IrrigationEventSchema),
+});
+
 export const BaselineIrrigationSchema = z.object({
   id: z.number(),
   farm_id: z.number(),
@@ -439,4 +446,15 @@ export async function logIrrigationEvent(
     method: "POST",
     body,
   });
+}
+
+/** Newest-first (backend orders by event_date desc). */
+export async function getIrrigationEvents(
+  farmId: number,
+): Promise<IrrigationEvent[]> {
+  const page = await request(
+    PaginatedIrrigationEventsSchema,
+    `/farms/${farmId}/irrigation-events?limit=10`,
+  );
+  return page.results;
 }

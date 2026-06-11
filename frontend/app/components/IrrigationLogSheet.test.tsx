@@ -45,7 +45,7 @@ describe("IrrigationLogSheet", () => {
     const props = renderSheet();
 
     await user.type(screen.getByLabelText("Gallons applied"), "2500");
-    await user.click(screen.getByRole("button", { name: "Save irrigation" }));
+    await user.click(screen.getByRole("button", { name: "Save Irrigation" }));
 
     await waitFor(() => {
       expect(mockLog).toHaveBeenCalledWith(7, {
@@ -64,7 +64,7 @@ describe("IrrigationLogSheet", () => {
     await user.click(screen.getByLabelText("Pump runtime"));
     await user.type(screen.getByLabelText("Hours run"), "2");
     await user.type(screen.getByLabelText("Pump flow (GPM)"), "300");
-    await user.click(screen.getByRole("button", { name: "Save irrigation" }));
+    await user.click(screen.getByRole("button", { name: "Save Irrigation" }));
 
     await waitFor(() => {
       // 2 h x 300 gal/min x 60 min/h
@@ -79,7 +79,7 @@ describe("IrrigationLogSheet", () => {
     const user = userEvent.setup();
     renderSheet();
 
-    await user.click(screen.getByRole("button", { name: "Save irrigation" }));
+    await user.click(screen.getByRole("button", { name: "Save Irrigation" }));
 
     expect(await screen.findByText("Gallons is required")).toBeInTheDocument();
     expect(mockLog).not.toHaveBeenCalled();
@@ -91,7 +91,7 @@ describe("IrrigationLogSheet", () => {
     const props = renderSheet();
 
     await user.type(screen.getByLabelText("Gallons applied"), "100");
-    await user.click(screen.getByRole("button", { name: "Save irrigation" }));
+    await user.click(screen.getByRole("button", { name: "Save Irrigation" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("quota reached");
     expect(props.onClose).not.toHaveBeenCalled();

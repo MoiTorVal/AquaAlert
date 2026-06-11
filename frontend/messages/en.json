@@ -2,15 +2,26 @@
   "navbar": {
     "language": "Language",
     "english": "English",
-    "spanish": "Español"
+    "spanish": "Español",
+    "home": "Home",
+    "myFarms": "My Farms",
+    "contact": "Contact",
+    "login": "Log In",
+    "signup": "Sign up",
+    "logout": "Log Out"
   },
   "farmDetail": {
     "back": "← My farms",
-    "logIrrigation": "+ Log irrigation",
+    "logIrrigation": "+ Log Irrigation",
+    "edit": "Edit",
     "field": "Field",
     "crop": "Crop",
     "planted": "Planted",
     "soil": "Soil",
+    "irrigationHistory": "Recent irrigation",
+    "noIrrigations": "No irrigation logged yet — tap \"+ Log Irrigation\" after you water.",
+    "gallonsValue": "{gallons} gal",
+    "estimated": "Estimated",
     "notFound": "Farm not found",
     "backToFarms": "Back to my farms",
     "errorTitle": "Something went wrong",
@@ -54,7 +65,7 @@
     "asOf": "As of {date}"
   },
   "irrigationLog": {
-    "title": "Log irrigation",
+    "title": "Log Irrigation",
     "close": "Close",
     "date": "Date",
     "modeQuestion": "How do you want to log it?",
@@ -63,7 +74,7 @@
     "gallonsApplied": "Gallons applied",
     "hoursRun": "Hours run",
     "pumpFlow": "Pump flow (GPM)",
-    "save": "Save irrigation",
+    "save": "Save Irrigation",
     "saving": "Saving…",
     "failed": "Failed to log irrigation"
   },
@@ -165,8 +176,9 @@
     "failed": "Failed to create farm",
     "fieldBoundary": "Field boundary (optional)",
     "fieldBoundaryHint": "Zoom to your field, then use the polygon tool to trace its edges. Click your first point again to finish. Satellite water data needs this boundary.",
-    "boundaryCaptured": "✓ Boundary captured",
-    "boundaryPending": "No boundary drawn yet"
+    "boundaryCaptured": "✓ Boundary saved",
+    "boundaryPending": "No boundary drawn yet",
+    "boundaryDrawing": "Drawing — click your first point again or press Finish to save the shape"
   },
   "fieldMap": {
     "locate": "Find my field",

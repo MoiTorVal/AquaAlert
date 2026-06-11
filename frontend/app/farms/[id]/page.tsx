@@ -8,17 +8,22 @@ import {
   ApiError,
   getBaselineIrrigations,
   getFarm,
+  getIrrigationEvents,
   getWaterSavings,
   getWaterStress,
   type Farm,
+  type IrrigationEvent,
   type WaterSavingsRow,
   type WaterStress,
 } from "../../lib/api";
+import { soilLabel } from "../../lib/validators";
 import TrafficLightCard from "../../components/TrafficLightCard";
 import StressDetails from "../../components/StressDetails";
 import SavingsCard from "../../components/SavingsCard";
 import IrrigationLogSheet from "../../components/IrrigationLogSheet";
+import EditFarmSheet from "../../components/EditFarmSheet";
 import FarmSetupCard from "../../components/FarmSetupCard";
+import ProtectedRoute from "../../components/ProtectedRoute";
 
 // Leaflet requires `window`; load client-side only (see FieldMap.tsx).
 const FieldMap = dynamic(() => import("../../components/FieldMap"), {
@@ -36,6 +41,7 @@ type LoadState =
       stress: WaterStress | null;
       savings: WaterSavingsRow[];
       hasBaseline: boolean;
+      events: IrrigationEvent[];
     };
 
 export default function FarmDetailPage({
@@ -43,11 +49,20 @@ export default function FarmDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  return (
+    <ProtectedRoute>
+      <FarmDetailContent params={params} />
+    </ProtectedRoute>
+  );
+}
+
+function FarmDetailContent({ params }: { params: Promise<{ id: string }> }) {
   const t = useTranslations("farmDetail");
   const { id } = use(params);
   const farmId = Number(id);
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [logOpen, setLogOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
   const reload = () => {
@@ -59,11 +74,12 @@ export default function FarmDetailPage({
     let active = true;
     (async () => {
       try {
-        const [farm, stress, savings, baselines] = await Promise.all([
+        const [farm, stress, savings, baselines, events] = await Promise.all([
           getFarm(farmId),
           getWaterStress(farmId),
           getWaterSavings(farmId),
           getBaselineIrrigations(farmId),
+          getIrrigationEvents(farmId),
         ]);
         if (active)
           setState({
@@ -72,6 +88,7 @@ export default function FarmDetailPage({
             stress,
             savings,
             hasBaseline: baselines.length > 0,
+            events,
           });
       } catch (err) {
         if (!active) return;
@@ -112,7 +129,7 @@ export default function FarmDetailPage({
       </CenteredMessage>
     );
 
-  const { farm, stress, savings, hasBaseline } = state;
+  const { farm, stress, savings, hasBaseline, events } = state;
 
   return (
     // pt-28 clears the fixed navbar (matches /impact)
@@ -122,12 +139,20 @@ export default function FarmDetailPage({
       </Link>
       <div className="mt-2 flex items-center justify-between">
         <h1 className="text-2xl font-bold">{farm.name}</h1>
-        <button
-          onClick={() => setLogOpen(true)}
-          className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
-        >
-          {t("logIrrigation")}
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setEditOpen(true)}
+            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            {t("edit")}
+          </button>
+          <button
+            onClick={() => setLogOpen(true)}
+            className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+          >
+            {t("logIrrigation")}
+          </button>
+        </div>
       </div>
 
       <div className="mt-6 flex flex-col gap-4">
@@ -162,9 +187,41 @@ export default function FarmDetailPage({
             </div>
             <div>
               <dt className="text-gray-500">{t("soil")}</dt>
-              <dd className="font-medium">{farm.soil_type ?? "—"}</dd>
+              <dd className="font-medium">
+                {farm.soil_type ? soilLabel(farm.soil_type) : "—"}
+              </dd>
             </div>
           </dl>
+        </section>
+
+        <section className="rounded-2xl border border-gray-200 p-6">
+          <h2 className="text-lg font-semibold">{t("irrigationHistory")}</h2>
+          {events.length === 0 ? (
+            <p className="mt-2 text-sm text-gray-500">{t("noIrrigations")}</p>
+          ) : (
+            <ul className="mt-3 divide-y divide-gray-100 text-sm">
+              {events.map((event) => (
+                <li
+                  key={event.id}
+                  className="flex items-center justify-between py-2"
+                >
+                  <span className="text-gray-600">{event.event_date}</span>
+                  <span className="flex items-center gap-2">
+                    {event.source === "estimated" && (
+                      <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
+                        {t("estimated")}
+                      </span>
+                    )}
+                    <span className="font-medium">
+                      {t("gallonsValue", {
+                        gallons: event.gallons_applied.toLocaleString(),
+                      })}
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
 
         <Link href={`/farms/${farmId}/savings`} className="block">
@@ -178,6 +235,13 @@ export default function FarmDetailPage({
         onClose={() => setLogOpen(false)}
         onLogged={reload}
       />
+      {editOpen && (
+        <EditFarmSheet
+          farm={farm}
+          onClose={() => setEditOpen(false)}
+          onSaved={reload}
+        />
+      )}
     </main>
   );
 }
