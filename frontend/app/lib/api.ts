@@ -64,7 +64,6 @@ export const FarmSchema = z.object({
   user_id: z.number(),
   name: z.string(),
   location: z.string().nullable(),
-  area_hectares: z.number().nullable(),
   crop_type: z.string().nullable(),
   soil_type: SoilTextureSchema.nullable(),
   root_depth_cm: z.number().nullable(),
