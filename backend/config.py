@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     db_name: str
     db_port: int
     openet_api_key: SecretStr | None = None
+    # Spatial CIMIS key for provisional ET gap-fill; unset = gap-fill off.
+    cimis_app_key: SecretStr | None = None
     next_public_api_base_url: str
     allowed_origins: list[str] = ["http://localhost:3000"]
     # Used to build links sent (or, in dev, logged) to users.

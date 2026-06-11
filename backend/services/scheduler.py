@@ -21,8 +21,9 @@ from backend.config import settings
 from backend.database import SessionLocal
 from backend.enums import JobStatus
 from backend.schemas import ETReadingCreate, WaterSavingsBase
-from backend.services import openet_client, savings_calculator
+from backend.services import cimis_client, openet_client, savings_calculator
 from backend.services.aquacrop_runner import AquaCropInputError, compute_and_cache_water_stress
+from backend.services.cimis_client import CimisError
 from backend.services.openet_client import ET_SOURCE, OpenETError, OpenETRateLimitError
 
 logger = logging.getLogger(__name__)
@@ -31,6 +32,34 @@ ET_SIM_JOB_NAME = "daily_et_sim"
 SAVINGS_JOB_NAME = "daily_water_savings"
 REGIONAL_STATS_JOB_NAME = "nightly_regional_stats"
 STALE_ET_DAYS = 7
+
+# Provisional gap-fill rows: Spatial CIMIS reference ET scaled by a crop
+# coefficient. Replaced in place by OpenET actuals as they land.
+PROVISIONAL_ET_SOURCE = "cimis:eto*kc"
+
+# FAO-56 Table 12 mid-season Kc (midpoint where the table gives a range;
+# quinoa is absent from FAO-56 — literature consensus ~1.00). Mid-season-only
+# is a documented simplification: the gap window is <= ~7 days, and the Phase 9
+# residual model absorbs stage-curve error. Keys must mirror
+# aquacrop_runner.CROP_TYPE_TO_AQUACROP (enforced by test).
+KC_MID = {
+    "alfalfa": 0.95,
+    "barley": 1.15,
+    "cassava": 0.80,
+    "corn": 1.20,
+    "cotton": 1.18,
+    "drybean": 1.15,
+    "maize": 1.20,
+    "potato": 1.15,
+    "quinoa": 1.00,
+    "rice": 1.20,
+    "sorghum": 1.05,
+    "soybean": 1.15,
+    "sugarbeet": 1.20,
+    "sunflower": 1.08,
+    "tomato": 1.15,
+    "wheat": 1.15,
+}
 
 _scheduler: AsyncIOScheduler | None = None
 
@@ -43,8 +72,12 @@ def is_et_stale(latest_et_date: date | None, today: date | None = None) -> bool:
 
 
 async def _pull_et_for_farm(db: Session, farm: models.Farm, today: date) -> None:
-    """Fetch only the dates missing since the last cached reading (quota-frugal)."""
-    latest = crud.get_latest_et_date(db, farm.id)
+    """Fetch only the dates missing since the last cached reading (quota-frugal).
+
+    Keyed to the latest OpenET-source row — provisional gap-fill rows sit past
+    it and must be refetched (upsert replaces them) once actuals exist.
+    """
+    latest = crud.get_latest_et_date(db, farm.id, source=ET_SOURCE)
     fetch_start = farm.planting_date if latest is None else latest + timedelta(days=1)
     if fetch_start > today:
         return
@@ -62,7 +95,41 @@ async def _pull_et_for_farm(db: Session, farm: models.Farm, today: date) -> None
         if p["reading_date"] >= fetch_start
     ]
     if new_readings:
-        crud.create_et_readings(db, new_readings)
+        crud.upsert_et_readings(db, new_readings)
+
+
+async def _gapfill_et_for_farm(db: Session, farm: models.Farm, today: date) -> int:
+    """Bridge the OpenET lag window with provisional CIMIS ETo x Kc readings.
+
+    Best-effort: requires a CIMIS key and a supported crop, fills only dates
+    with no reading at all (never overwrites actuals), and stops at yesterday
+    (Spatial CIMIS publishes with ~1-day lag). Returns rows attempted.
+    """
+    if settings.cimis_app_key is None:
+        return 0
+    kc = KC_MID.get((farm.crop_type or "").strip().lower())
+    if kc is None:
+        return 0
+    latest = crud.get_latest_et_date(db, farm.id)
+    if latest is None:
+        return 0
+    gap_start = latest + timedelta(days=1)
+    gap_end = today - timedelta(days=1)
+    if gap_start > gap_end:
+        return 0
+    centroid = to_shape(farm.field_polygon).centroid
+    points = await cimis_client.fetch_daily_eto(centroid.y, centroid.x, gap_start, gap_end)
+    readings = [
+        ETReadingCreate(
+            farm_id=farm.id,
+            reading_date=p["reading_date"],
+            et_mm=round(p["eto_mm"] * kc, 2),
+            source=PROVISIONAL_ET_SOURCE,
+        )
+        for p in points
+    ]
+    crud.insert_et_readings_if_absent(db, readings)
+    return len(readings)
 
 
 async def run_et_sim_job(db: Session | None = None, today: date | None = None) -> models.JobRun:
@@ -75,6 +142,7 @@ async def run_et_sim_job(db: Session | None = None, today: date | None = None) -
     job_run = crud.create_job_run(db, ET_SIM_JOB_NAME)
     processed = failed = skipped = 0
     stale_farms: list[int] = []
+    provisional_only_farms: list[int] = []
     notes: list[str] = []
     try:
         for farm in crud.get_active_farms(db, today):
@@ -99,6 +167,14 @@ async def run_et_sim_job(db: Session | None = None, today: date | None = None) -
                 logger.warning("ET fetch failed for farm %d: %s", farm.id, exc)
                 continue
 
+            # Best-effort: a CIMIS outage must never fail the farm — the sim
+            # just runs on actuals alone, as it did before gap-fill existed.
+            try:
+                await _gapfill_et_for_farm(db, farm, today)
+            except CimisError as exc:
+                notes.append(f"farm {farm.id}: CIMIS gap-fill failed: {exc}")
+                logger.warning("CIMIS gap-fill failed for farm %d: %s", farm.id, exc)
+
             latest = crud.get_latest_et_date(db, farm.id)
             if latest is None:
                 skipped += 1
@@ -107,6 +183,10 @@ async def run_et_sim_job(db: Session | None = None, today: date | None = None) -
             if is_et_stale(latest, today):
                 stale_farms.append(farm.id)
                 logger.warning("Stale ET for farm %d: latest reading %s", farm.id, latest)
+            elif is_et_stale(crud.get_latest_et_date(db, farm.id, source=ET_SOURCE), today):
+                # Fresh only thanks to provisional rows — surface it so a
+                # broken OpenET pull can't hide behind CIMIS indefinitely.
+                provisional_only_farms.append(farm.id)
             try:
                 compute_and_cache_water_stress(db, farm, as_of_date=latest)
             except AquaCropInputError as exc:
@@ -118,6 +198,8 @@ async def run_et_sim_job(db: Session | None = None, today: date | None = None) -
 
         if stale_farms:
             notes.append(f"stale ET (> {STALE_ET_DAYS}d): farms {stale_farms}")
+        if provisional_only_farms:
+            notes.append(f"OpenET actuals stale, running on provisional ET: farms {provisional_only_farms}")
         status = JobStatus.SUCCESS if failed == 0 else JobStatus.FAILED
         crud.finish_job_run(
             db, job_run, status,

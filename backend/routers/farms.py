@@ -137,6 +137,7 @@ def get_water_stress(
     return WaterStressResponse(
         **AquaCropOutputRead.model_validate(output).model_dump(),
         et_latest_date=et_latest_date,
+        et_latest_actual_date=crud.get_latest_et_date(db=db, farm_id=farm_id, source=ET_SOURCE),
         et_is_stale=scheduler_service.is_et_stale(et_latest_date),
     )
 
