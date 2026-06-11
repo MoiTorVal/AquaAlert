@@ -11,6 +11,13 @@ class Settings(BaseSettings):
     openet_api_key: SecretStr | None = None
     # Spatial CIMIS key for provisional ET gap-fill; unset = gap-fill off.
     cimis_app_key: SecretStr | None = None
+    # Twilio SMS alerts; all four unset = SMS features off.
+    twilio_account_sid: str | None = None
+    twilio_auth_token: SecretStr | None = None
+    twilio_from_number: str | None = None
+    # Exact public URL Twilio posts inbound SMS to (signature is computed
+    # over it, so it must match the Twilio console verbatim).
+    sms_webhook_url: str | None = None
     next_public_api_base_url: str
     allowed_origins: list[str] = ["http://localhost:3000"]
     # Used to build links sent (or, in dev, logged) to users.

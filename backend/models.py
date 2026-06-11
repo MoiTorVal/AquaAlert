@@ -5,7 +5,10 @@ from sqlalchemy import String, Integer, Numeric, DateTime, Date, Boolean, Foreig
 from sqlalchemy.orm import Mapped, mapped_column
 from backend.database import Base
 from geoalchemy2 import Geography
-from backend.enums import SoilTexture, StressSeverity, WaterSource, Locale, Tier, IrrigationSource, JobStatus
+from backend.enums import (
+    SoilTexture, StressSeverity, WaterSource, Locale, Tier, IrrigationSource, JobStatus,
+    AlertChannel, AlertFeedback,
+)
 
 
 def _enum_values(enum_cls):
@@ -33,6 +36,9 @@ class User(Base):
         nullable=False,
         server_default=Tier.FREE.value,
     )
+    # E.164; unique so an inbound SMS maps to exactly one account.
+    phone_number: Mapped[str | None] = mapped_column(String(20), unique=True)
+    sms_alerts_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
 
 class WeatherReading(Base):
     __tablename__ = "weather_readings"
@@ -194,6 +200,37 @@ class RegionalStats(Base):
     total_kwh_saved: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
     total_co2_kg_saved: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
     computed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class Alert(Base):
+    """Outbound stress alert log: powers send dedupe, reply routing (an SMS
+    reply is matched to the user's most recent alert), and the alert-precision
+    metric once feedback lands."""
+    __tablename__ = "alerts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    farm_id: Mapped[int] = mapped_column(Integer, ForeignKey("farms.id", ondelete="CASCADE"), nullable=False, index=True)
+    severity: Mapped[StressSeverity] = mapped_column(
+        SAEnum(StressSeverity, name="stressseverity", values_callable=_enum_values), nullable=False
+    )
+    as_of_date: Mapped[date] = mapped_column(Date, nullable=False)
+    days_to_stress: Mapped[int | None] = mapped_column(Integer)
+    channel: Mapped[AlertChannel] = mapped_column(
+        SAEnum(AlertChannel, name="alertchannel", values_callable=_enum_values),
+        nullable=False,
+        server_default=AlertChannel.SMS.value,
+    )
+    provider_message_sid: Mapped[str | None] = mapped_column(String(64))
+    sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    feedback: Mapped[AlertFeedback | None] = mapped_column(
+        SAEnum(AlertFeedback, name="alertfeedback", values_callable=_enum_values)
+    )
+    feedback_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (
+        # a crashed job re-run must not text the farmer twice
+        UniqueConstraint("farm_id", "as_of_date", "severity", name="uq_alert_farm_date_severity"),
+    )
 
 
 class JobRun(Base):
