@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Input from "../components/Input";
 import Image from "next/image";
 import { useForm, ValidationError } from "@formspree/react";
@@ -45,15 +45,10 @@ export default function ContactPage() {
   });
   const [errors, setErrors] = useState<FormErrors>({});
 
+  // On success the form unmounts (success panel renders instead), so the
+  // stale field state is unreachable — no reset needed.
   const submitted = state.succeeded;
   const loading = state.submitting;
-
-  useEffect(() => {
-    if (state.succeeded) {
-      setFields({ name: "", email: "", subject: "", message: "" });
-      setErrors({});
-    }
-  }, [state.succeeded]);
 
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
