@@ -40,3 +40,12 @@ class JobStatus(str, enum.Enum):
     RUNNING = "running"
     SUCCESS = "success"
     FAILED = "failed"
+
+class AlertChannel(str, enum.Enum):
+    SMS = "sms"
+
+class AlertFeedback(str, enum.Enum):
+    """Farmer's reply to "does the crop look stressed?" — ground truth for
+    alert precision metrics and Phase 9 model labels."""
+    YES = "yes"
+    NO = "no"
