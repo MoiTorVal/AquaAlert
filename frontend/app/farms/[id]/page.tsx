@@ -212,6 +212,14 @@ function FarmDetailContent({ params }: { params: Promise<{ id: string }> }) {
                         {t("estimated")}
                       </span>
                     )}
+                    {event.hours_run != null && event.pump_gpm != null && (
+                      <span className="text-xs text-gray-500">
+                        {t("runtimeValue", {
+                          hours: event.hours_run.toLocaleString(),
+                          gpm: event.pump_gpm.toLocaleString(),
+                        })}
+                      </span>
+                    )}
                     <span className="font-medium">
                       {t("gallonsValue", {
                         gallons: event.gallons_applied.toLocaleString(),

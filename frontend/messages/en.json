@@ -21,6 +21,7 @@
     "irrigationHistory": "Recent irrigation",
     "noIrrigations": "No irrigation logged yet — tap \"+ Log Irrigation\" after you water.",
     "gallonsValue": "{gallons} gal",
+    "runtimeValue": "{hours} hrs @ {gpm} GPM",
     "estimated": "Estimated",
     "notFound": "Farm not found",
     "backToFarms": "Back to my farms",

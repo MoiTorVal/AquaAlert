@@ -330,6 +330,50 @@ def test_log_irrigation_event(client, farm):
     assert data["source"] == "user_log"
 
 
+def test_log_irrigation_event_runtime_fields_round_trip(client, farm):
+    response = client.post(
+        f"/farms/{farm.id}/irrigation-events",
+        json={
+            "event_date": "2026-06-01",
+            "gallons_applied": "120000.00",
+            "hours_run": "2.00",
+            "pump_gpm": "1000.00",
+        },
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["hours_run"] == "2.00"
+    assert data["pump_gpm"] == "1000.00"
+
+    listed = client.get(f"/farms/{farm.id}/irrigation-events").json()["results"][0]
+    assert listed["hours_run"] == "2.00"
+    assert listed["pump_gpm"] == "1000.00"
+
+
+def test_log_irrigation_event_gallons_mode_leaves_runtime_null(client, farm):
+    response = client.post(
+        f"/farms/{farm.id}/irrigation-events",
+        json={"event_date": "2026-06-01", "gallons_applied": "1500.00"},
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["hours_run"] is None
+    assert data["pump_gpm"] is None
+
+
+def test_log_irrigation_event_rejects_nonpositive_runtime(client, farm):
+    response = client.post(
+        f"/farms/{farm.id}/irrigation-events",
+        json={
+            "event_date": "2026-06-01",
+            "gallons_applied": "100.00",
+            "hours_run": "0",
+            "pump_gpm": "1000.00",
+        },
+    )
+    assert response.status_code == 422
+
+
 def test_log_irrigation_event_unknown_farm(client):
     response = client.post(
         "/farms/9999/irrigation-events",

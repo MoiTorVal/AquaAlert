@@ -214,6 +214,9 @@ class WaterStressResponse(AquaCropOutputRead):
 class IrrigationEventCreate(BaseModel):
     event_date: date
     gallons_applied: Decimal
+    # Runtime-mode logs keep what the farmer entered; gallons_applied stays canonical.
+    hours_run: Optional[Decimal] = Field(None, gt=0)
+    pump_gpm: Optional[Decimal] = Field(None, gt=0)
 
 
 class IrrigationEventResponse(BaseModel):
@@ -221,6 +224,8 @@ class IrrigationEventResponse(BaseModel):
     farm_id: int
     event_date: date
     gallons_applied: Decimal
+    hours_run: Optional[Decimal] = None
+    pump_gpm: Optional[Decimal] = None
     source: IrrigationSource
     logged_at: datetime
 

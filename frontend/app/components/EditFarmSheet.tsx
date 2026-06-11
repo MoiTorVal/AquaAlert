@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
+import dynamic from "next/dynamic";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { updateFarm, type Farm } from "../lib/api";
@@ -11,6 +13,12 @@ import {
   type EditFarmFormValues,
 } from "../lib/validators";
 
+// Leaflet requires `window`; load client-side only (see FieldMapDraw.tsx).
+const FieldMapDraw = dynamic(() => import("./FieldMapDraw"), {
+  ssr: false,
+  loading: () => <div className="h-80 animate-pulse rounded-xl bg-gray-100" />,
+});
+
 export default function EditFarmSheet({
   farm,
   onClose,
@@ -20,7 +28,12 @@ export default function EditFarmSheet({
   onClose: () => void;
   onSaved: (farm: Farm) => void;
 }) {
+  const t = useTranslations("createFarm");
   const [serverError, setServerError] = useState<string | null>(null);
+  const [fieldPolygon, setFieldPolygon] = useState<string | null>(
+    farm.field_polygon,
+  );
+  const [drawing, setDrawing] = useState(false);
   const {
     register,
     handleSubmit,
@@ -50,6 +63,7 @@ export default function EditFarmSheet({
         acreage_acres: values.acreage_acres
           ? Number(values.acreage_acres)
           : null,
+        field_polygon: fieldPolygon,
       });
       onSaved(saved);
       onClose();
@@ -70,7 +84,7 @@ export default function EditFarmSheet({
       aria-modal="true"
       aria-label={`Edit ${farm.name}`}
     >
-      <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-white p-6 sm:rounded-2xl">
+      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-t-2xl bg-white p-6 sm:rounded-2xl">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Edit farm</h2>
           <button
@@ -130,6 +144,34 @@ export default function EditFarmSheet({
                 </span>
               )}
             </label>
+          </div>
+
+          <div className="text-sm">
+            <span className="text-gray-700">{t("fieldBoundary")}</span>
+            <p className="mt-1 text-xs text-gray-500">{t("fieldBoundaryHint")}</p>
+            <div className="mt-2">
+              <FieldMapDraw
+                onChange={setFieldPolygon}
+                onDrawingChange={setDrawing}
+                initialWkt={farm.field_polygon}
+              />
+            </div>
+            <p
+              role="status"
+              className={`mt-1 text-xs ${
+                drawing
+                  ? "text-amber-600"
+                  : fieldPolygon
+                    ? "text-green-700"
+                    : "text-gray-400"
+              }`}
+            >
+              {drawing
+                ? t("boundaryDrawing")
+                : fieldPolygon
+                  ? t("boundaryCaptured")
+                  : t("boundaryPending")}
+            </p>
           </div>
 
           {serverError && (

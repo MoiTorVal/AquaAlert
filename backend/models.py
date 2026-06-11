@@ -146,6 +146,9 @@ class IrrigationEvent(Base):
     farm_id: Mapped[int] = mapped_column(Integer, ForeignKey("farms.id", ondelete="CASCADE"), nullable=False)
     event_date: Mapped[date] = mapped_column(Date, nullable=False)
     gallons_applied: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
+    # Set only for runtime-mode logs; gallons_applied is always the canonical total.
+    hours_run: Mapped[Decimal | None] = mapped_column(Numeric(6, 2))
+    pump_gpm: Mapped[Decimal | None] = mapped_column(Numeric(8, 2))
     source: Mapped[IrrigationSource] = mapped_column(
         SAEnum(IrrigationSource, name="irrigationsource", values_callable=_enum_values),
         nullable=False,

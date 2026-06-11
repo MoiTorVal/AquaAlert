@@ -49,6 +49,10 @@ export default function IrrigationLogSheet({
       await logIrrigationEvent(farmId, {
         event_date: values.event_date,
         gallons_applied: gallonsFromForm(values),
+        ...(values.mode === "runtime" && {
+          hours_run: Number(values.hours),
+          pump_gpm: Number(values.gpm),
+        }),
       });
       reset({ event_date: todayISO(), mode: values.mode });
       onLogged();

@@ -21,6 +21,7 @@
     "irrigationHistory": "Riegos recientes",
     "noIrrigations": "Aún no hay riegos registrados — toque \"+ Registrar riego\" después de regar.",
     "gallonsValue": "{gallons} gal",
+    "runtimeValue": "{hours} hrs @ {gpm} GPM",
     "estimated": "Estimado",
     "notFound": "Rancho no encontrado",
     "backToFarms": "Volver a mis ranchos",

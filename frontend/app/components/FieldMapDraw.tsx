@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { MapContainer, TileLayer, useMap } from "react-leaflet";
 import { IMAGERY_ATTRIBUTION, IMAGERY_URL, LABELS_URL } from "../lib/mapTiles";
-import { toWktPolygon } from "../lib/wkt";
+import { parseWktPolygon, toWktPolygon } from "../lib/wkt";
 
 // Central Valley default view — most pilot farms are CA (CONUS-only product).
 const DEFAULT_CENTER: [number, number] = [36.9, -119.9];
@@ -21,9 +21,11 @@ const LOCATE_ZOOM = 16;
 export default function FieldMapDraw({
   onChange,
   onDrawingChange,
+  initialWkt,
 }: {
   onChange: (wkt: string | null) => void;
   onDrawingChange?: (drawing: boolean) => void;
+  initialWkt?: string | null;
 }) {
   return (
     // relative z-0 isolate traps Leaflet's internal z-indexes (up to ~1000)
@@ -36,7 +38,11 @@ export default function FieldMapDraw({
       >
         <TileLayer attribution={IMAGERY_ATTRIBUTION} url={IMAGERY_URL} />
         <TileLayer url={LABELS_URL} />
-        <DrawControl onChange={onChange} onDrawingChange={onDrawingChange} />
+        <DrawControl
+          onChange={onChange}
+          onDrawingChange={onDrawingChange}
+          initialWkt={initialWkt}
+        />
         <LocateButton />
       </MapContainer>
     </div>
@@ -95,9 +101,11 @@ function LocateButton() {
 function DrawControl({
   onChange,
   onDrawingChange,
+  initialWkt,
 }: {
   onChange: (wkt: string | null) => void;
   onDrawingChange?: (drawing: boolean) => void;
+  initialWkt?: string | null;
 }) {
   const map = useMap();
   // Latest-callback ref: the draw handlers below are bound once, so they read
@@ -109,9 +117,22 @@ function DrawControl({
     onDrawingChangeRef.current = onDrawingChange;
   }, [onChange, onDrawingChange]);
 
+  // The map mounts once per dialog open, so reading initialWkt only on the
+  // first effect run is intentional (it seeds the editable layer).
+  const initialWktRef = useRef(initialWkt);
+
   useEffect(() => {
     const drawn = new L.FeatureGroup();
     map.addLayer(drawn);
+    const initialRing = initialWktRef.current
+      ? parseWktPolygon(initialWktRef.current)
+      : null;
+    if (initialRing) {
+      // WKT rings are closed; Leaflet polygons close themselves.
+      const layer = L.polygon(initialRing.slice(0, -1));
+      drawn.addLayer(layer);
+      map.fitBounds(layer.getBounds(), { maxZoom: LOCATE_ZOOM });
+    }
     const control = new L.Control.Draw({
       draw: {
         polygon: { allowIntersection: false },

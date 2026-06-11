@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import Logo from "./Logo";
 import LocaleToggle from "./LocaleToggle";
@@ -18,25 +18,12 @@ export default function Navbar() {
   const t = useTranslations("navbar");
   const { user, setUser } = useAuth();
 
-  const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 60);
-    };
-
-    window.addEventListener("scroll", handleScroll);
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-    };
-  }, []);
-
   return (
-    <nav
-      className={`fixed top-0 left-0 right-0 w-full z-50 transition-colors duration-300 border-b border-white/10  
-  ${scrolled || menuOpen ? "bg-zinc-950 border-zinc-800" : "bg-zinc-950/80 backdrop-blur-md"}`}
-    >
+    // Solid background: a translucent navbar reads as a different color on
+    // every page (near-black over the landing page, charcoal over white).
+    <nav className="fixed top-0 left-0 right-0 w-full z-50 border-b border-zinc-800 bg-zinc-950">
       <div className="max-w-7xl mx-auto px-8 py-6 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-1">
           <Logo />

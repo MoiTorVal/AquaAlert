@@ -1,8 +1,10 @@
 "use client";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { useAuth } from "../context/AuthContext";
 
 export default function Hero() {
+  const { user } = useAuth();
   return (
     <section className="relative min-h-screen flex items-center pt-24">
       <div className="absolute inset-0 bg-bg-primary" />
@@ -36,10 +38,10 @@ export default function Hero() {
             className="flex gap-4 mt-10"
           >
             <Link
-              href="/login"
+              href={user ? "/farms" : "/login"}
               className="bg-btn-secondary hover:bg-white text-btn-text font-semibold px-6 py-2 rounded-lg transition-colors text-sm"
             >
-              Get Started
+              {user ? "Go to My Farms" : "Get Started"}
             </Link>
 
             {/* Secondary — ghost */}

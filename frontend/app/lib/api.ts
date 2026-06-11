@@ -124,6 +124,8 @@ export const IrrigationEventSchema = z.object({
   farm_id: z.number(),
   event_date: z.string(),
   gallons_applied: z.coerce.number(),
+  hours_run: z.coerce.number().nullable(),
+  pump_gpm: z.coerce.number().nullable(),
   source: z.enum(["user_log", "estimated"]),
   logged_at: z.string(),
 });
@@ -440,7 +442,12 @@ export async function fetchSgmaReportBlobUrl(
 
 export async function logIrrigationEvent(
   farmId: number,
-  body: { event_date: string; gallons_applied: number },
+  body: {
+    event_date: string;
+    gallons_applied: number;
+    hours_run?: number;
+    pump_gpm?: number;
+  },
 ): Promise<IrrigationEvent> {
   return request(IrrigationEventSchema, `/farms/${farmId}/irrigation-events`, {
     method: "POST",
