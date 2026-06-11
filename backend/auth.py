@@ -6,9 +6,11 @@ from backend.config import settings
 SECRET_KEY = settings.secret_key.get_secret_value()
 
 ALGORITHM = "HS256"
-# Short-lived: there is no server-side revocation yet (see Known Issues),
-# so a leaked token stays valid until expiry. Keep the window small.
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 2  # 2 hours
+# Access tokens are short-lived and never revoked individually — the
+# refresh_tokens table is the revocable session record. A leaked access
+# token is only good for this window.
+ACCESS_TOKEN_EXPIRE_MINUTES = 15
+REFRESH_TOKEN_EXPIRE_DAYS = 14
 
 class TokenExpiredError(Exception):
     pass

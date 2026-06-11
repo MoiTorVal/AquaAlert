@@ -170,6 +170,32 @@ function formatDetail(detail: unknown, status: number): string {
   return `Request failed with status ${status}`;
 }
 
+// Endpoints where a 401 is the answer, not an expired access token.
+const NO_REFRESH_PATHS = [
+  "/auth/refresh",
+  "/auth/login",
+  "/auth/signup",
+  "/auth/logout",
+];
+
+// Single-flight: concurrent 401s share one refresh call instead of racing,
+// which matters because rotation revokes a refresh token after first use.
+let refreshInFlight: Promise<boolean> | null = null;
+
+function tryRefresh(): Promise<boolean> {
+  refreshInFlight ??= fetch(`${API_BASE}/auth/refresh`, {
+    method: "POST",
+    credentials: "include",
+    signal: AbortSignal.timeout(10000),
+  })
+    .then((res) => res.ok)
+    .catch(() => false)
+    .finally(() => {
+      refreshInFlight = null;
+    });
+  return refreshInFlight;
+}
+
 async function request<T>(
   schema: z.ZodSchema<T>,
   path: string,
@@ -178,6 +204,7 @@ async function request<T>(
     body?: unknown;
     signal?: AbortSignal;
   } = {},
+  isRetry = false,
 ): Promise<T> {
   const { method = "GET", body, signal } = options;
   const res = await fetch(`${API_BASE}${path}`, {
@@ -193,6 +220,16 @@ async function request<T>(
   });
 
   if (!res.ok) {
+    if (
+      res.status === 401 &&
+      !isRetry &&
+      !NO_REFRESH_PATHS.includes(path)
+    ) {
+      const refreshed = await tryRefresh();
+      if (refreshed) {
+        return request(schema, path, options, true);
+      }
+    }
     const data = await res.json().catch(() => ({}));
     const detail =
       data && typeof data === "object" && "detail" in data
