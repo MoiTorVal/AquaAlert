@@ -8,7 +8,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from backend.database import engine, get_db
-from backend.routers import farms, auth, public
+from backend.routers import farms, auth, public, sms
 from backend.config import settings
 from backend.rate_limit import limiter
 from backend.services.scheduler import start_scheduler, shutdown_scheduler
@@ -50,6 +50,7 @@ app.add_middleware(
 app.include_router(farms.router, prefix="/farms", tags=["farms"])
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(public.router, tags=["public"])
+app.include_router(sms.router, prefix="/sms", tags=["sms"])
 
 
 @app.get("/healthz", tags=["ops"])

@@ -1,3 +1,4 @@
+import re
 from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
@@ -7,7 +8,13 @@ from geoalchemy2.elements import WKBElement
 from geoalchemy2.shape import to_shape
 from shapely import wkt as shapely_wkt
 from shapely.errors import ShapelyError
-from backend.enums import SoilTexture, StressSeverity, WaterSource, Locale, Tier, IrrigationSource
+from backend.enums import (
+    SoilTexture, StressSeverity, WaterSource, Locale, Tier, IrrigationSource,
+    AlertChannel, AlertFeedback,
+)
+
+# E.164 — what Twilio sends in webhook From and expects in To.
+_E164_RE = re.compile(r"^\+[1-9]\d{1,14}$")
 
 # Leaflet-draw field boundaries run tens of vertices; this only blocks
 # abusive payloads that would bloat the DB row and the OpenET request body.
@@ -142,6 +149,8 @@ class UserResponse(BaseModel):
     tier: Tier
     is_socially_disadvantaged: Optional[bool] = None
     is_beginning_farmer: Optional[bool] = None
+    phone_number: Optional[str] = None
+    sms_alerts_enabled: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -151,6 +160,17 @@ class UserUpdateRequest(BaseModel):
     locale: Optional[Locale] = None
     is_socially_disadvantaged: Optional[bool] = None
     is_beginning_farmer: Optional[bool] = None
+    phone_number: Optional[str] = None
+    sms_alerts_enabled: Optional[bool] = None
+
+    @field_validator("phone_number")
+    @classmethod
+    def _validate_phone(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        if not _E164_RE.fullmatch(v):
+            raise ValueError("phone_number must be E.164 format, e.g. +15551234567")
+        return v
 
 
 class ResetPasswordRequest(BaseModel):
@@ -280,6 +300,28 @@ class SavingsSeriesResponse(BaseModel):
     end_date: date
     totals: SavingsTotals
     results: list[WaterSavingsResponse]
+
+
+class AlertResponse(BaseModel):
+    """Alert history row. provider_message_sid is internal — never exposed."""
+    id: int
+    farm_id: int
+    severity: StressSeverity
+    as_of_date: date
+    days_to_stress: Optional[int] = None
+    channel: AlertChannel
+    sent_at: datetime
+    feedback: Optional[AlertFeedback] = None
+    feedback_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PaginatedAlertResponse(BaseModel):
+    total: int
+    skip: int
+    limit: int
+    results: list[AlertResponse]
 
 
 class RegionalStatsResponse(BaseModel):
