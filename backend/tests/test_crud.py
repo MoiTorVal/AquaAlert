@@ -224,3 +224,39 @@ def test_count_baseline_irrigations_by_farm(db, farm):
         baseline=BaselineIrrigationCreate(gallons_per_week_estimate=Decimal("5000.00")),
     )
     assert crud.count_baseline_irrigations_by_farm(db, farm_id=farm.id) == 1
+
+
+def test_et_reading_upsert_and_insert_if_absent(db, farm):
+    from datetime import date
+    from backend.schemas import ETReadingCreate
+
+    day = date(2026, 6, 1)
+    crud.create_et_readings(db, [ETReadingCreate(farm_id=farm.id, reading_date=day, et_mm=5.0, source="openet:Ensemble")])
+
+    # if-absent never touches an existing row
+    crud.insert_et_readings_if_absent(db, [ETReadingCreate(farm_id=farm.id, reading_date=day, et_mm=9.9, source="cimis:eto*kc")])
+    (row,) = crud.get_et_readings_by_farm(db, farm_id=farm.id)
+    assert float(row.et_mm) == 5.0
+    assert row.source == "openet:Ensemble"
+
+    # upsert replaces in place
+    crud.upsert_et_readings(db, [ETReadingCreate(farm_id=farm.id, reading_date=day, et_mm=6.5, source="openet:Ensemble")])
+    (row,) = crud.get_et_readings_by_farm(db, farm_id=farm.id)
+    assert float(row.et_mm) == 6.5
+
+    # empty input is a no-op, not an error
+    crud.upsert_et_readings(db, [])
+    crud.insert_et_readings_if_absent(db, [])
+
+
+def test_get_latest_et_date_source_filter(db, farm):
+    from datetime import date
+    from backend.schemas import ETReadingCreate
+
+    crud.create_et_readings(db, [
+        ETReadingCreate(farm_id=farm.id, reading_date=date(2026, 6, 1), et_mm=5.0, source="openet:Ensemble"),
+        ETReadingCreate(farm_id=farm.id, reading_date=date(2026, 6, 5), et_mm=4.8, source="cimis:eto*kc"),
+    ])
+    assert crud.get_latest_et_date(db, farm.id) == date(2026, 6, 5)
+    assert crud.get_latest_et_date(db, farm.id, source="openet:Ensemble") == date(2026, 6, 1)
+    assert crud.get_latest_et_date(db, farm.id, source="cimis:eto*kc") == date(2026, 6, 5)

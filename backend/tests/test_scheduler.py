@@ -3,14 +3,20 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 import pytest
+from pydantic import SecretStr
 
 from backend import crud, models
+from backend.config import settings
 from backend.enums import JobStatus, SoilTexture
 from backend.schemas import AquaCropOutputBase, BaselineIrrigationCreate, ETReadingCreate, FarmCreate, IrrigationEventCreate
-from backend.services import openet_client, savings_calculator
+from backend.services import cimis_client, openet_client, savings_calculator
+from backend.services.aquacrop_runner import CROP_TYPE_TO_AQUACROP
+from backend.services.cimis_client import CimisUnavailableError
 from backend.services.openet_client import ET_SOURCE, OpenETRateLimitError, OpenETUnavailableError
 from backend.services.scheduler import (
     ET_SIM_JOB_NAME,
+    KC_MID,
+    PROVISIONAL_ET_SOURCE,
     SAVINGS_JOB_NAME,
     is_et_stale,
     run_et_sim_job,
@@ -199,6 +205,172 @@ def test_et_sim_job_flags_stale_et(db, sim_farm, monkeypatch):
     assert "stale ET" in job_run.detail
     output = crud.get_latest_aquacrop_output(db, sim_farm.id)
     assert output.as_of_date == stale_latest
+
+
+# ── CIMIS gap-fill ───────────────────────────────────────────────────────────
+
+
+OPENET_LAG_DAYS = 6
+
+
+@pytest.fixture
+def lagged_et(monkeypatch):
+    """OpenET fake with a realistic data lag: nothing newer than TODAY - 6."""
+    calls = []
+
+    async def fake_fetch(geometry, start_date, end_date, transport=None):
+        calls.append((start_date, end_date))
+        end = min(end_date, TODAY - timedelta(days=OPENET_LAG_DAYS))
+        if start_date > end:
+            return []
+        days = (end - start_date).days + 1
+        return [
+            {"reading_date": start_date + timedelta(days=i), "et_mm": 3.0 + ((start_date.toordinal() + i) % 5) * 0.5}
+            for i in range(days)
+        ]
+
+    monkeypatch.setattr(openet_client, "fetch_daily_et", fake_fetch)
+    return calls
+
+
+@pytest.fixture
+def fake_cimis(monkeypatch):
+    """Enable gap-fill and replace the CIMIS fetch with a flat 4.0 mm ETo series."""
+    calls = []
+
+    async def fake_fetch(lat, lng, start_date, end_date, transport=None):
+        calls.append((lat, lng, start_date, end_date))
+        days = (end_date - start_date).days + 1
+        return [{"reading_date": start_date + timedelta(days=i), "eto_mm": 4.0} for i in range(days)]
+
+    monkeypatch.setattr(settings, "cimis_app_key", SecretStr("test-cimis-key"))
+    monkeypatch.setattr(cimis_client, "fetch_daily_eto", fake_fetch)
+    return calls
+
+
+def test_kc_table_covers_all_supported_crops():
+    assert set(KC_MID) == set(CROP_TYPE_TO_AQUACROP)
+
+
+def test_gapfill_bridges_openet_lag(db, sim_farm, lagged_et, fake_cimis):
+    job_run = asyncio.run(run_et_sim_job(db=db, today=TODAY))
+
+    assert job_run.status == JobStatus.SUCCESS
+    # CIMIS asked exactly for the lag window, at the field centroid
+    (lat, lng, gap_start, gap_end) = fake_cimis[0]
+    assert (gap_start, gap_end) == (TODAY - timedelta(days=OPENET_LAG_DAYS - 1), TODAY - timedelta(days=1))
+    assert lat == pytest.approx(36.905, abs=1e-3)
+    assert lng == pytest.approx(-120.095, abs=1e-3)
+
+    readings = {r.reading_date: r for r in crud.get_et_readings_by_farm(db, sim_farm.id)}
+    assert max(readings) == TODAY - timedelta(days=1)
+    provisional = readings[TODAY - timedelta(days=1)]
+    assert provisional.source == PROVISIONAL_ET_SOURCE
+    assert float(provisional.et_mm) == pytest.approx(4.0 * KC_MID["corn"])
+    assert readings[TODAY - timedelta(days=OPENET_LAG_DAYS)].source == ET_SOURCE
+
+    # sim consumed the provisional days — "as of yesterday (estimated)"
+    output = crud.get_latest_aquacrop_output(db, sim_farm.id)
+    assert output.as_of_date == TODAY - timedelta(days=1)
+
+
+def test_openet_actuals_replace_provisional_rows(db, sim_farm, lagged_et, fake_cimis, monkeypatch):
+    asyncio.run(run_et_sim_job(db=db, today=TODAY))  # first run: lagged → provisional tail
+
+    calls = []
+
+    async def caught_up(geometry, start_date, end_date, transport=None):
+        calls.append((start_date, end_date))
+        days = (end_date - start_date).days + 1
+        return [
+            {"reading_date": start_date + timedelta(days=i), "et_mm": 3.0 + ((start_date.toordinal() + i) % 5) * 0.5}
+            for i in range(days)
+        ]
+
+    monkeypatch.setattr(openet_client, "fetch_daily_et", caught_up)
+    asyncio.run(run_et_sim_job(db=db, today=TODAY))
+
+    # refetch starts after the last ACTUAL, re-requesting provisional dates
+    assert calls == [(TODAY - timedelta(days=OPENET_LAG_DAYS - 1), TODAY)]
+    readings = crud.get_et_readings_by_farm(db, sim_farm.id)
+    assert {r.source for r in readings} == {ET_SOURCE}  # no provisional rows left
+    assert max(r.reading_date for r in readings) == TODAY
+
+
+def test_gapfill_skipped_without_cimis_key(db, sim_farm, lagged_et, monkeypatch):
+    monkeypatch.setattr(settings, "cimis_app_key", None)
+    job_run = asyncio.run(run_et_sim_job(db=db, today=TODAY))
+
+    assert job_run.status == JobStatus.SUCCESS
+    readings = crud.get_et_readings_by_farm(db, sim_farm.id)
+    assert {r.source for r in readings} == {ET_SOURCE}
+    assert max(r.reading_date for r in readings) == TODAY - timedelta(days=OPENET_LAG_DAYS)
+
+
+def test_gapfill_failure_does_not_fail_farm(db, sim_farm, lagged_et, monkeypatch):
+    monkeypatch.setattr(settings, "cimis_app_key", SecretStr("test-cimis-key"))
+
+    async def cimis_down(*args, **kwargs):
+        raise CimisUnavailableError("503")
+
+    monkeypatch.setattr(cimis_client, "fetch_daily_eto", cimis_down)
+    job_run = asyncio.run(run_et_sim_job(db=db, today=TODAY))
+
+    assert job_run.status == JobStatus.SUCCESS  # best-effort: sim ran on actuals
+    assert job_run.farms_processed == 1
+    assert "CIMIS gap-fill failed" in job_run.detail
+    output = crud.get_latest_aquacrop_output(db, sim_farm.id)
+    assert output.as_of_date == TODAY - timedelta(days=OPENET_LAG_DAYS)
+
+
+def test_gapfill_handles_unpublished_cimis_days(db, sim_farm, lagged_et, monkeypatch):
+    monkeypatch.setattr(settings, "cimis_app_key", SecretStr("test-cimis-key"))
+
+    async def nothing_published(*args, **kwargs):
+        return []
+
+    monkeypatch.setattr(cimis_client, "fetch_daily_eto", nothing_published)
+    job_run = asyncio.run(run_et_sim_job(db=db, today=TODAY))
+
+    assert job_run.status == JobStatus.SUCCESS
+    readings = crud.get_et_readings_by_farm(db, sim_farm.id)
+    assert {r.source for r in readings} == {ET_SOURCE}
+
+
+def test_gapfill_flags_provisional_only_farms(db, sim_farm, fake_cimis, monkeypatch):
+    """OpenET outage must not hide behind fresh provisional rows."""
+    stale_latest = TODAY - timedelta(days=10)
+    crud.create_et_readings(db, [
+        ETReadingCreate(farm_id=sim_farm.id, reading_date=START + timedelta(days=i), et_mm=5.0, source=ET_SOURCE)
+        for i in range((stale_latest - START).days + 1)
+    ])
+
+    async def nothing_new(*args, **kwargs):
+        return []
+
+    monkeypatch.setattr(openet_client, "fetch_daily_et", nothing_new)
+    job_run = asyncio.run(run_et_sim_job(db=db, today=TODAY))
+
+    assert job_run.status == JobStatus.SUCCESS
+    assert "running on provisional ET" in job_run.detail
+    assert "stale ET" not in job_run.detail  # provisional rows keep the series fresh
+    output = crud.get_latest_aquacrop_output(db, sim_farm.id)
+    assert output.as_of_date == TODAY - timedelta(days=1)
+
+
+def test_water_stress_reports_latest_actual_date(client, db, farm):
+    actual = date.today() - timedelta(days=6)
+    estimated = date.today() - timedelta(days=1)
+    _cached_output(db, farm.id, estimated)
+    crud.create_et_readings(db, [
+        ETReadingCreate(farm_id=farm.id, reading_date=actual, et_mm=5.0, source=ET_SOURCE),
+        ETReadingCreate(farm_id=farm.id, reading_date=estimated, et_mm=4.8, source=PROVISIONAL_ET_SOURCE),
+    ])
+
+    body = client.get(f"/farms/{farm.id}/water-stress").json()
+    assert body["et_latest_date"] == estimated.isoformat()
+    assert body["et_latest_actual_date"] == actual.isoformat()
+    assert body["et_is_stale"] is False
 
 
 # ── savings job ──────────────────────────────────────────────────────────────

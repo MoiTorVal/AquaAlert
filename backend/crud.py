@@ -153,6 +153,38 @@ def create_et_readings(db: Session, readings: list[ETReadingCreate]) -> list[mod
     return rows
 
 
+def upsert_et_readings(db: Session, readings: list[ETReadingCreate]) -> None:
+    """Insert readings, replacing any existing row for the same farm/date —
+    used when OpenET actuals land on dates holding provisional gap-fill values."""
+    if not readings:
+        return
+    stmt = pg_insert(models.ETReading).values([r.model_dump() for r in readings])
+    stmt = stmt.on_conflict_do_update(
+        constraint="uq_et_farm_date",
+        set_={
+            "et_mm": stmt.excluded.et_mm,
+            "source": stmt.excluded.source,
+            "fetched_at": func.now(),
+        },
+    )
+    db.execute(stmt)
+    db.commit()
+
+
+def insert_et_readings_if_absent(db: Session, readings: list[ETReadingCreate]) -> None:
+    """Insert readings, never touching existing rows — provisional gap-fill
+    values must not overwrite OpenET actuals."""
+    if not readings:
+        return
+    stmt = (
+        pg_insert(models.ETReading)
+        .values([r.model_dump() for r in readings])
+        .on_conflict_do_nothing(constraint="uq_et_farm_date")
+    )
+    db.execute(stmt)
+    db.commit()
+
+
 def get_latest_aquacrop_output(db: Session, farm_id: int) -> models.AquaCropOutput | None:
     return (
         db.query(models.AquaCropOutput)
@@ -260,12 +292,15 @@ def get_active_farms(db: Session, today: date) -> list[models.Farm]:
     )
 
 
-def get_latest_et_date(db: Session, farm_id: int) -> date | None:
-    return (
-        db.query(func.max(models.ETReading.reading_date))
-        .filter(models.ETReading.farm_id == farm_id)
-        .scalar()
+def get_latest_et_date(db: Session, farm_id: int, source: str | None = None) -> date | None:
+    """Latest cached reading date; pass source to consider only one provider
+    (e.g. OpenET actuals, ignoring provisional CIMIS gap-fill rows)."""
+    query = db.query(func.max(models.ETReading.reading_date)).filter(
+        models.ETReading.farm_id == farm_id
     )
+    if source is not None:
+        query = query.filter(models.ETReading.source == source)
+    return query.scalar()
 
 
 def get_latest_baseline_irrigation(db: Session, farm_id: int) -> models.BaselineIrrigation | None:

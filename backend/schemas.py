@@ -181,8 +181,13 @@ class AquaCropOutputRead(AquaCropOutputBase):
 
 
 class WaterStressResponse(AquaCropOutputRead):
-    """AquaCrop result + stale-data guard fields ("as of [date]" trust signal)."""
+    """AquaCrop result + stale-data guard fields ("as of [date]" trust signal).
+
+    et_latest_date > et_latest_actual_date means recent days are provisional
+    CIMIS gap-fill estimates, not OpenET actuals — UI should say "estimated".
+    """
     et_latest_date: Optional[date] = None
+    et_latest_actual_date: Optional[date] = None
     et_is_stale: bool
 
 
