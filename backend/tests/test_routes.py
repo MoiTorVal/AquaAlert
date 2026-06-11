@@ -1,3 +1,4 @@
+import math
 from datetime import date
 from decimal import Decimal
 
@@ -279,6 +280,40 @@ def test_update_farm_polygon(client, farm):
     assert response.status_code == 200
     returned = response.json()["field_polygon"]
     assert shapely_wkt.loads(returned).equals(shapely_wkt.loads(POLYGON_WKT))
+
+
+def test_create_farm_rejects_invalid_wkt(client):
+    response = client.post("/farms/", json={"name": "Bad Poly", "field_polygon": "not-wkt"})
+    assert response.status_code == 422
+
+
+def test_create_farm_rejects_non_polygon_geometry(client):
+    response = client.post(
+        "/farms/", json={"name": "Line Farm", "field_polygon": "LINESTRING (0 0, 1 1)"}
+    )
+    assert response.status_code == 422
+
+
+def test_create_farm_rejects_self_intersecting_polygon(client):
+    bowtie = "POLYGON ((0 0, 1 1, 1 0, 0 1, 0 0))"
+    response = client.post("/farms/", json={"name": "Bowtie", "field_polygon": bowtie})
+    assert response.status_code == 422
+
+
+def test_create_farm_rejects_oversized_polygon(client):
+    # 1101 vertices on a circle — valid geometry, but over the abuse cap
+    points = ", ".join(
+        f"{math.cos(2 * math.pi * i / 1100):.6f} {math.sin(2 * math.pi * i / 1100):.6f}"
+        for i in range(1100)
+    )
+    huge = f"POLYGON (({points}, 1.000000 0.000000))"
+    response = client.post("/farms/", json={"name": "Huge", "field_polygon": huge})
+    assert response.status_code == 422
+
+
+def test_update_farm_rejects_invalid_wkt(client, farm):
+    response = client.put(f"/farms/{farm.id}", json={"field_polygon": "POLYGON oops"})
+    assert response.status_code == 422
 
 
 # ── irrigation event routes ──────────────────────────────────────────────────

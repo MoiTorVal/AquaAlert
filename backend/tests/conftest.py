@@ -12,6 +12,7 @@ from backend.main import app
 from backend.database import get_db
 from backend.models import User
 from backend.auth import create_access_token
+from backend.config import settings
 from backend.rate_limit import limiter
 from backend import crud
 from backend.schemas import FarmCreate
@@ -27,6 +28,16 @@ def _disable_rate_limit():
     limiter.reset()
     yield
     limiter.enabled = False
+
+
+@pytest.fixture(autouse=True)
+def _insecure_cookie_for_testclient():
+    """TestClient talks plain http://testserver — a Secure-flagged cookie
+    would never be sent back, failing every authenticated test."""
+    original = settings.secure_cookie
+    settings.secure_cookie = False
+    yield
+    settings.secure_cookie = original
 
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
