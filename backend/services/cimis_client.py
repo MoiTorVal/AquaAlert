@@ -129,4 +129,6 @@ async def fetch_daily_eto(
                 raise CimisRequestError(detail, status_code=response.status_code)
         if attempt < MAX_ATTEMPTS:
             await asyncio.sleep(RETRY_BASE_DELAY_S * 2 ** (attempt - 1))
+    if last_error is None:
+        raise CimisUnavailableError("Unknown CIMIS error")
     raise last_error

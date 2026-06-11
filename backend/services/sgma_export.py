@@ -12,6 +12,7 @@ from datetime import date
 from decimal import Decimal
 from xml.sax.saxutils import escape
 
+from geoalchemy2.shape import to_shape
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
@@ -24,6 +25,30 @@ from backend import models
 GALLONS_PER_ACRE_FOOT = Decimal("325851")
 
 CSV_HEADER = "month,extraction_gallons,extraction_acre_feet"
+
+# The app only serves irrigation; GEARS wants use type stated explicitly.
+WATER_USE_TYPE = "Agricultural irrigation"
+
+
+def _centroid(farm: models.Farm) -> str:
+    """Field centroid as 'lat, lon' — a disclosed proxy, NOT a wellhead fix;
+    the schema has no well entity. Planar centroid is accurate enough at
+    field scale, so no geodesic math needed."""
+    if farm.field_polygon is None:
+        return "unreported"
+    point = to_shape(farm.field_polygon).centroid
+    return f"{point.y:.6f}, {point.x:.6f}"
+
+
+def _measurement_method(source_counts: dict[str, int]) -> str:
+    """GEARS distinguishes metered vs alternative methods — this app is
+    self-reported only, and the report must never imply otherwise."""
+    logged = source_counts.get("user_log", 0)
+    estimated = source_counts.get("estimated", 0)
+    return (
+        "Farmer-reported irrigation logs, non-metered "
+        f"({logged} farmer-logged, {estimated} estimated entries)"
+    )
 
 
 def _acre_feet(gallons: Decimal) -> Decimal:
@@ -51,16 +76,26 @@ def monthly_rows(monthly_gallons: dict[int, Decimal]) -> list[tuple[str, Decimal
     ]
 
 
-def build_csv(farm: models.Farm, year: int, monthly_gallons: dict[int, Decimal]) -> str:
+def build_csv(
+    farm: models.Farm,
+    year: int,
+    monthly_gallons: dict[int, Decimal],
+    owner: models.User,
+    source_counts: dict[str, int],
+) -> str:
     # csv.writer quotes embedded commas/newlines so a crafted farm name
     # can't inject rows; _formula_safe defuses leading formula characters.
     buffer = io.StringIO()
     writer = csv.writer(buffer, lineterminator="\n")
     writer.writerow([f"# SGMA Groundwater Extraction Report — {year}"])
     writer.writerow([f"# Farm: {_formula_safe(farm.name)}"])
+    writer.writerow([f"# Reporter: {_formula_safe(owner.name or 'unreported')} <{owner.email}>"])
+    writer.writerow([f"# Water use type: {WATER_USE_TYPE}"])
     writer.writerow([f"# Water source: {farm.water_source.value if farm.water_source else 'unreported'}"])
     writer.writerow([f"# Acreage: {farm.acreage_acres if farm.acreage_acres is not None else 'unreported'}"])
-    writer.writerow([f"# Generated: {date.today().isoformat()} by AquaAlert from farmer-logged irrigation events"])
+    writer.writerow([f"# Field centroid (well location not captured): {_centroid(farm)}"])
+    writer.writerow([f"# Measurement method: {_measurement_method(source_counts)}"])
+    writer.writerow([f"# Generated: {date.today().isoformat()} by AquaAlert"])
     writer.writerow(CSV_HEADER.split(","))
     total = Decimal("0")
     for month, gallons, acre_feet in monthly_rows(monthly_gallons):
@@ -70,7 +105,13 @@ def build_csv(farm: models.Farm, year: int, monthly_gallons: dict[int, Decimal])
     return buffer.getvalue()
 
 
-def build_pdf(farm: models.Farm, year: int, monthly_gallons: dict[int, Decimal]) -> bytes:
+def build_pdf(
+    farm: models.Farm,
+    year: int,
+    monthly_gallons: dict[int, Decimal],
+    owner: models.User,
+    source_counts: dict[str, int],
+) -> bytes:
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter, title=f"SGMA Report {year} — {farm.name}")
     styles = getSampleStyleSheet()
@@ -98,11 +139,11 @@ def build_pdf(farm: models.Farm, year: int, monthly_gallons: dict[int, Decimal])
         # Paragraph parses XML-ish markup — unescaped user text can inject
         # tags or crash the build on malformed ones.
         Paragraph(f"Farm: {escape(farm.name)}", styles["Normal"]),
-        Paragraph(f"Water source: {source} · Acreage: {acreage}", styles["Normal"]),
-        Paragraph(
-            f"Generated {date.today().isoformat()} by AquaAlert from farmer-logged irrigation events.",
-            styles["Normal"],
-        ),
+        Paragraph(f"Reporter: {escape(owner.name or 'unreported')} ({escape(owner.email)})", styles["Normal"]),
+        Paragraph(f"Water use type: {WATER_USE_TYPE} · Water source: {source} · Acreage: {acreage}", styles["Normal"]),
+        Paragraph(f"Field centroid (well location not captured): {_centroid(farm)}", styles["Normal"]),
+        Paragraph(f"Measurement method: {escape(_measurement_method(source_counts))}", styles["Normal"]),
+        Paragraph(f"Generated {date.today().isoformat()} by AquaAlert.", styles["Normal"]),
         Spacer(1, 0.3 * inch),
         table,
     ])

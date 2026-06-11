@@ -393,6 +393,21 @@ def monthly_extraction_gallons(db: Session, farm_id: int, year: int) -> dict[int
     return {int(month): Decimal(gallons) for month, gallons in rows}
 
 
+def extraction_source_counts(db: Session, farm_id: int, year: int) -> dict[str, int]:
+    """Source -> event count for the year (SGMA measurement-method disclosure)."""
+    rows = (
+        db.query(models.IrrigationEvent.source, func.count(models.IrrigationEvent.id))
+        .filter(
+            models.IrrigationEvent.farm_id == farm_id,
+            models.IrrigationEvent.event_date >= date(year, 1, 1),
+            models.IrrigationEvent.event_date <= date(year, 12, 31),
+        )
+        .group_by(models.IrrigationEvent.source)
+        .all()
+    )
+    return {source.value: count for source, count in rows}
+
+
 def count_farms_by_severity(db: Session) -> dict[str, int]:
     """Severity of each farm's LATEST AquaCropOutput, counted across all farms."""
     latest = (

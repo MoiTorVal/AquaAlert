@@ -6,7 +6,7 @@ from decimal import Decimal
 import pytest
 
 from backend import crud, models
-from backend.enums import JobStatus, StressSeverity
+from backend.enums import IrrigationSource, JobStatus, StressSeverity
 from backend.schemas import (
     AquaCropOutputBase,
     FarmCreate,
@@ -17,6 +17,7 @@ from backend.services.scheduler import REGIONAL_STATS_JOB_NAME, run_regional_sta
 
 WEEK1 = (date(2026, 5, 25), date(2026, 5, 31))
 WEEK2 = (date(2026, 6, 1), date(2026, 6, 7))
+POLYGON_WKT = "POLYGON ((-120.5 36.5, -120.4 36.5, -120.4 36.6, -120.5 36.6, -120.5 36.5))"
 
 
 def _savings_row(db, farm_id, period, gallons_saved="3000.00", kwh="1.71", co2="0.39"):
@@ -96,11 +97,47 @@ def test_sgma_csv_contains_monthly_totals(client, db, farm):
     assert "January,0,0.0000" in text  # all 12 months present
 
 
+def test_sgma_csv_reports_required_gears_fields(client, db, farm):
+    """GEARS extractor reports require use type, measurement method, reporter,
+    and well location (disclosed here as field centroid proxy)."""
+    _log_events(db, farm.id)
+    text = client.get(f"/farms/{farm.id}/sgma-export?year=2026&format=csv").text
+    assert "# Reporter: Test User <test@example.com>" in text
+    assert "# Water use type: Agricultural irrigation" in text
+    assert (
+        "# Measurement method: Farmer-reported irrigation logs, non-metered "
+        "(3 farmer-logged, 0 estimated entries)" in text
+    )
+    assert "# Field centroid (well location not captured): unreported" in text
+
+
+def test_sgma_csv_reports_field_centroid(client, db, user):
+    poly_farm = crud.create_farm(
+        db, FarmCreate(name="Poly Farm", field_polygon=POLYGON_WKT), user_id=user.id
+    )
+    text = client.get(f"/farms/{poly_farm.id}/sgma-export?year=2026&format=csv").text
+    assert "# Field centroid (well location not captured): 36.550000, -120.450000" in text
+
+
+def test_sgma_csv_counts_estimated_events(client, db, farm):
+    _log_events(db, farm.id)
+    crud.create_irrigation_event(
+        db,
+        farm.id,
+        IrrigationEventCreate(event_date=date(2026, 6, 25), gallons_applied=Decimal("5000")),
+        source=IrrigationSource.ESTIMATED,
+    )
+    text = client.get(f"/farms/{farm.id}/sgma-export?year=2026&format=csv").text
+    assert "(3 farmer-logged, 1 estimated entries)" in text
+
+
 def test_sgma_csv_excludes_other_years(client, db, farm):
     crud.create_irrigation_event(db, farm.id, IrrigationEventCreate(
         event_date=date(2025, 6, 2), gallons_applied=Decimal("99999")))
     response = client.get(f"/farms/{farm.id}/sgma-export?year=2026&format=csv")
     assert "99999" not in response.text
+    # source counts honor the year filter too
+    assert "(0 farmer-logged, 0 estimated entries)" in response.text
 
 
 def test_sgma_pdf_returns_pdf(client, db, farm):

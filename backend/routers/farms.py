@@ -286,12 +286,17 @@ def sgma_export_report(
 ):
     db_farm = _validate_farm_ownership(db=db, farm_id=farm_id, user_id=current_user.id)
     monthly = crud.monthly_extraction_gallons(db=db, farm_id=farm_id, year=year)
+    source_counts = crud.extraction_source_counts(db=db, farm_id=farm_id, year=year)
     filename = f"sgma-report-{year}-farm-{farm_id}.{format}"
     if format == "pdf":
-        content: bytes | str = sgma_export.build_pdf(db_farm, year, monthly)
+        content: bytes | str = sgma_export.build_pdf(
+            db_farm, year, monthly, owner=current_user, source_counts=source_counts
+        )
         media_type = "application/pdf"
     else:
-        content = sgma_export.build_csv(db_farm, year, monthly)
+        content = sgma_export.build_csv(
+            db_farm, year, monthly, owner=current_user, source_counts=source_counts
+        )
         media_type = "text/csv"
     return Response(
         content=content,
