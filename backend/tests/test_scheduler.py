@@ -7,12 +7,13 @@ from pydantic import SecretStr
 
 from backend import crud, models
 from backend.config import settings
-from backend.enums import JobStatus, SoilTexture
+from backend.enums import JobStatus, Locale, SoilTexture, StressSeverity
 from backend.schemas import AquaCropOutputBase, BaselineIrrigationCreate, ETReadingCreate, FarmCreate, IrrigationEventCreate
-from backend.services import cimis_client, openet_client, savings_calculator
+from backend.services import cimis_client, openet_client, savings_calculator, sms_service
 from backend.services.aquacrop_runner import CROP_TYPE_TO_AQUACROP
 from backend.services.cimis_client import CimisUnavailableError
 from backend.services.openet_client import ET_SOURCE, OpenETRateLimitError, OpenETUnavailableError
+from backend.services.sms_service import SmsError
 from backend.services.scheduler import (
     ET_SIM_JOB_NAME,
     KC_MID,
@@ -371,6 +372,159 @@ def test_water_stress_reports_latest_actual_date(client, db, farm):
     assert body["et_latest_date"] == estimated.isoformat()
     assert body["et_latest_actual_date"] == actual.isoformat()
     assert body["et_is_stale"] is False
+
+
+# ── SMS alert dispatch ───────────────────────────────────────────────────────
+
+
+@pytest.fixture
+def twilio_settings(monkeypatch):
+    monkeypatch.setattr(settings, "twilio_account_sid", "ACtest")
+    monkeypatch.setattr(settings, "twilio_auth_token", SecretStr("token"))
+    monkeypatch.setattr(settings, "twilio_from_number", "+15550006666")
+
+
+@pytest.fixture
+def sms_farmer(db, user):
+    user.phone_number = "+15551112222"
+    user.sms_alerts_enabled = True
+    db.commit()
+    return user
+
+
+@pytest.fixture
+def sent_sms(monkeypatch):
+    calls = []
+
+    async def fake_send(to, body, transport=None):
+        calls.append((to, body))
+        return f"SM{len(calls)}"
+
+    monkeypatch.setattr(sms_service, "send_sms", fake_send)
+    return calls
+
+
+def _force_sim_severity(monkeypatch, severity, days_to_stress=3):
+    """Pin the sim output: severity escalation logic is what's under test,
+    not AquaCrop."""
+    from backend.services import scheduler as scheduler_module
+
+    def fake(db, farm, as_of_date):
+        return crud.upsert_aquacrop_output(db, farm.id, AquaCropOutputBase(
+            as_of_date=as_of_date,
+            depletion_mm=Decimal("50.00"),
+            root_zone_moisture_pct=Decimal("50.00"),
+            severity=severity,
+            days_to_stress=days_to_stress,
+            paw_mm=Decimal("50.00"),
+            raw_threshold_mm=Decimal("60.00"),
+        ))
+
+    monkeypatch.setattr(scheduler_module, "compute_and_cache_water_stress", fake)
+
+
+def _seed_severity(db, farm_id, severity, as_of):
+    crud.upsert_aquacrop_output(db, farm_id, AquaCropOutputBase(
+        as_of_date=as_of, depletion_mm=Decimal("40.00"), root_zone_moisture_pct=Decimal("60.00"),
+        severity=severity, days_to_stress=5, paw_mm=Decimal("60.00"), raw_threshold_mm=Decimal("60.00"),
+    ))
+
+
+def test_alert_sent_on_escalation(db, sim_farm, fake_et, twilio_settings, sms_farmer, sent_sms, monkeypatch):
+    _seed_severity(db, sim_farm.id, StressSeverity.GREEN, TODAY - timedelta(days=1))
+    _force_sim_severity(monkeypatch, StressSeverity.RED, days_to_stress=2)
+
+    job_run = asyncio.run(run_et_sim_job(db=db, today=TODAY))
+
+    assert job_run.status == JobStatus.SUCCESS
+    (to, body), = sent_sms
+    assert to == sms_farmer.phone_number
+    assert "RED" in body and sim_farm.name in body
+    alert = crud.get_alert(db, sim_farm.id, TODAY, StressSeverity.RED)
+    assert alert is not None
+    assert alert.provider_message_sid == "SM1"
+    assert alert.days_to_stress == 2
+    assert "alerts sent: 1" in job_run.detail
+
+
+def test_alert_spanish_locale(db, sim_farm, fake_et, twilio_settings, sms_farmer, sent_sms, monkeypatch):
+    sms_farmer.locale = Locale.ES
+    db.commit()
+    _force_sim_severity(monkeypatch, StressSeverity.RED)
+
+    asyncio.run(run_et_sim_job(db=db, today=TODAY))
+    (_, body), = sent_sms
+    assert "ROJO" in body
+
+
+def test_no_alert_when_severity_unchanged(db, sim_farm, fake_et, twilio_settings, sms_farmer, sent_sms, monkeypatch):
+    _seed_severity(db, sim_farm.id, StressSeverity.RED, TODAY - timedelta(days=1))
+    _force_sim_severity(monkeypatch, StressSeverity.RED)
+
+    asyncio.run(run_et_sim_job(db=db, today=TODAY))
+    assert sent_sms == []
+
+
+def test_no_alert_on_deescalation(db, sim_farm, fake_et, twilio_settings, sms_farmer, sent_sms, monkeypatch):
+    _seed_severity(db, sim_farm.id, StressSeverity.RED, TODAY - timedelta(days=1))
+    _force_sim_severity(monkeypatch, StressSeverity.YELLOW)
+
+    asyncio.run(run_et_sim_job(db=db, today=TODAY))
+    assert sent_sms == []
+
+
+def test_no_alert_when_green(db, sim_farm, fake_et, twilio_settings, sms_farmer, sent_sms, monkeypatch):
+    _force_sim_severity(monkeypatch, StressSeverity.GREEN)
+
+    asyncio.run(run_et_sim_job(db=db, today=TODAY))
+    assert sent_sms == []
+
+
+def test_alert_rerun_is_idempotent(db, sim_farm, fake_et, twilio_settings, sms_farmer, sent_sms, monkeypatch):
+    """First-ever output counts as escalation (no previous = green); the
+    re-run dedupes on the existing Alert row."""
+    _force_sim_severity(monkeypatch, StressSeverity.YELLOW)
+
+    asyncio.run(run_et_sim_job(db=db, today=TODAY))
+    asyncio.run(run_et_sim_job(db=db, today=TODAY))
+
+    assert len(sent_sms) == 1
+    assert db.query(models.Alert).count() == 1
+
+
+def test_no_alert_without_opt_in(db, sim_farm, fake_et, twilio_settings, user, sent_sms, monkeypatch):
+    user.phone_number = "+15551112222"  # phone on file but alerts not enabled
+    db.commit()
+    _force_sim_severity(monkeypatch, StressSeverity.RED)
+
+    asyncio.run(run_et_sim_job(db=db, today=TODAY))
+    assert sent_sms == []
+    assert db.query(models.Alert).count() == 0
+
+
+def test_no_alert_when_twilio_unconfigured(db, sim_farm, fake_et, sms_farmer, sent_sms, monkeypatch):
+    monkeypatch.setattr(settings, "twilio_account_sid", None)
+    monkeypatch.setattr(settings, "twilio_auth_token", None)
+    monkeypatch.setattr(settings, "twilio_from_number", None)
+    _force_sim_severity(monkeypatch, StressSeverity.RED)
+
+    asyncio.run(run_et_sim_job(db=db, today=TODAY))
+    assert sent_sms == []
+
+
+def test_alert_send_failure_does_not_fail_job(db, sim_farm, fake_et, twilio_settings, sms_farmer, monkeypatch):
+    async def twilio_down(to, body, transport=None):
+        raise SmsError("Twilio returned 503")
+
+    monkeypatch.setattr(sms_service, "send_sms", twilio_down)
+    _force_sim_severity(monkeypatch, StressSeverity.RED)
+
+    job_run = asyncio.run(run_et_sim_job(db=db, today=TODAY))
+    assert job_run.status == JobStatus.SUCCESS
+    assert job_run.farms_processed == 1
+    assert "alert send failed" in job_run.detail
+    # no Alert row — tomorrow's run can try again
+    assert db.query(models.Alert).count() == 0
 
 
 # ── savings job ──────────────────────────────────────────────────────────────

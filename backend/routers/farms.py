@@ -11,6 +11,7 @@ from backend.schemas import (
     WeatherReadingResponse, PaginatedWeatherResponse,
     IrrigationEventCreate, IrrigationEventResponse, PaginatedIrrigationEventResponse,
     BaselineIrrigationCreate, BaselineIrrigationResponse, PaginatedBaselineIrrigationResponse,
+    AlertResponse, PaginatedAlertResponse,
     WaterSavingsResponse, PaginatedWaterSavingsResponse,
     SavingsSeriesResponse, SavingsTotals,
     ETReadingCreate, ETReadingResponse, ETSeriesResponse,
@@ -119,6 +120,23 @@ def list_irrigation_events(
     return PaginatedIrrigationEventResponse(
         total=total, skip=skip, limit=limit,
         results=[IrrigationEventResponse.model_validate(r) for r in results],
+    )
+
+
+@router.get("/{farm_id}/alerts", response_model=PaginatedAlertResponse)
+def list_alerts(
+    farm_id: int,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(10, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _validate_farm_ownership(db=db, farm_id=farm_id, user_id=current_user.id)
+    results = crud.get_alerts_by_farm(db=db, farm_id=farm_id, skip=skip, limit=limit)
+    total = crud.count_alerts_by_farm(db=db, farm_id=farm_id)
+    return PaginatedAlertResponse(
+        total=total, skip=skip, limit=limit,
+        results=[AlertResponse.model_validate(r) for r in results],
     )
 
 

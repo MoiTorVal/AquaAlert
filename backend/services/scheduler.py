@@ -19,12 +19,13 @@ from sqlalchemy.orm import Session
 from backend import crud, models
 from backend.config import settings
 from backend.database import SessionLocal
-from backend.enums import JobStatus
+from backend.enums import JobStatus, StressSeverity
 from backend.schemas import ETReadingCreate, WaterSavingsBase
-from backend.services import cimis_client, openet_client, savings_calculator
+from backend.services import cimis_client, openet_client, savings_calculator, sms_service
 from backend.services.aquacrop_runner import AquaCropInputError, compute_and_cache_water_stress
 from backend.services.cimis_client import CimisError
 from backend.services.openet_client import ET_SOURCE, OpenETError, OpenETRateLimitError
+from backend.services.sms_service import SmsError
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +61,8 @@ KC_MID = {
     "tomato": 1.15,
     "wheat": 1.15,
 }
+
+SEVERITY_RANK = {StressSeverity.GREEN: 0, StressSeverity.YELLOW: 1, StressSeverity.RED: 2}
 
 _scheduler: AsyncIOScheduler | None = None
 
@@ -132,6 +135,37 @@ async def _gapfill_et_for_farm(db: Session, farm: models.Farm, today: date) -> i
     return len(readings)
 
 
+async def _maybe_send_stress_alert(db: Session, farm: models.Farm, output: models.AquaCropOutput) -> bool:
+    """Text the farmer when severity escalates vs the previous sim day.
+
+    Escalation-only (green->yellow, ->red, yellow->red) so a farm sitting at
+    red doesn't text every day; after irrigation drops it back to green the
+    next climb alerts again. The (farm, as_of_date, severity) unique row keeps
+    a crashed-job re-run from sending twice.
+    """
+    if not sms_service.is_configured():
+        return False
+    if output.severity is None or SEVERITY_RANK[output.severity] == 0:
+        return False
+    user = db.get(models.User, farm.user_id)
+    if user is None or user.phone_number is None or not user.sms_alerts_enabled:
+        return False
+    previous = crud.get_previous_severity(db, farm.id, before_date=output.as_of_date)
+    if SEVERITY_RANK[output.severity] <= SEVERITY_RANK.get(previous, 0):
+        return False
+    if crud.get_alert(db, farm.id, output.as_of_date, output.severity) is not None:
+        return False
+    body = sms_service.stress_alert_body(
+        user.locale, farm.name, output.severity, output.as_of_date, output.days_to_stress
+    )
+    sid = await sms_service.send_sms(user.phone_number, body)
+    crud.create_alert(
+        db, farm_id=farm.id, severity=output.severity, as_of_date=output.as_of_date,
+        days_to_stress=output.days_to_stress, provider_message_sid=sid,
+    )
+    return True
+
+
 async def run_et_sim_job(db: Session | None = None, today: date | None = None) -> models.JobRun:
     """Daily: per active farm, pull missing OpenET days, run AquaCrop, cache output."""
     owns_session = db is None
@@ -140,7 +174,7 @@ async def run_et_sim_job(db: Session | None = None, today: date | None = None) -
     if today is None:
         today = date.today()
     job_run = crud.create_job_run(db, ET_SIM_JOB_NAME)
-    processed = failed = skipped = 0
+    processed = failed = skipped = alerts_sent = 0
     stale_farms: list[int] = []
     provisional_only_farms: list[int] = []
     notes: list[str] = []
@@ -188,18 +222,28 @@ async def run_et_sim_job(db: Session | None = None, today: date | None = None) -
                 # broken OpenET pull can't hide behind CIMIS indefinitely.
                 provisional_only_farms.append(farm.id)
             try:
-                compute_and_cache_water_stress(db, farm, as_of_date=latest)
+                output = compute_and_cache_water_stress(db, farm, as_of_date=latest)
             except AquaCropInputError as exc:
                 failed += 1
                 notes.append(f"farm {farm.id}: sim failed: {exc}")
                 logger.warning("AquaCrop sim failed for farm %d: %s", farm.id, exc)
                 continue
+            # Alert delivery is best-effort: a Twilio outage must not mark the
+            # sim as failed — the cached result is already correct.
+            try:
+                if await _maybe_send_stress_alert(db, farm, output):
+                    alerts_sent += 1
+            except SmsError as exc:
+                notes.append(f"farm {farm.id}: alert send failed: {exc}")
+                logger.warning("Alert send failed for farm %d: %s", farm.id, exc)
             processed += 1
 
         if stale_farms:
             notes.append(f"stale ET (> {STALE_ET_DAYS}d): farms {stale_farms}")
         if provisional_only_farms:
             notes.append(f"OpenET actuals stale, running on provisional ET: farms {provisional_only_farms}")
+        if alerts_sent:
+            notes.append(f"alerts sent: {alerts_sent}")
         status = JobStatus.SUCCESS if failed == 0 else JobStatus.FAILED
         crud.finish_job_run(
             db, job_run, status,

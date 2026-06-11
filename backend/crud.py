@@ -3,7 +3,7 @@ from backend.schemas import (
     FarmCreate, FarmUpdate, WeatherReadingCreate, IrrigationEventCreate, BaselineIrrigationCreate,
     ETReadingCreate, AquaCropOutputBase, WaterSavingsBase,
 )
-from backend.enums import IrrigationSource, JobStatus
+from backend.enums import AlertFeedback, IrrigationSource, JobStatus, StressSeverity
 from decimal import Decimal
 from geoalchemy2.elements import WKTElement
 from sqlalchemy import func, or_
@@ -85,16 +85,30 @@ def count_weather_readings_by_farm(
     return _weather_readings_base_query(db, farm_id, start_date, end_date).count()
 
 
-def create_irrigation_event(db: Session, farm_id: int, event: IrrigationEventCreate) -> models.IrrigationEvent:
+def create_irrigation_event(
+    db: Session,
+    farm_id: int,
+    event: IrrigationEventCreate,
+    source: IrrigationSource = IrrigationSource.USER_LOG,
+) -> models.IrrigationEvent:
     db_event = models.IrrigationEvent(
         **event.model_dump(),
         farm_id=farm_id,
-        source=IrrigationSource.USER_LOG,
+        source=source,
     )
     db.add(db_event)
     db.commit()
     db.refresh(db_event)
     return db_event
+
+
+def get_latest_irrigation_event(db: Session, farm_id: int) -> models.IrrigationEvent | None:
+    return (
+        db.query(models.IrrigationEvent)
+        .filter(models.IrrigationEvent.farm_id == farm_id)
+        .order_by(models.IrrigationEvent.event_date.desc(), models.IrrigationEvent.logged_at.desc())
+        .first()
+    )
 
 
 def _irrigation_events_base_query(db: Session, farm_id: int, start_date: date | None, end_date: date | None) -> Query:
@@ -435,6 +449,94 @@ def get_latest_regional_stats(db: Session) -> models.RegionalStats | None:
         .order_by(models.RegionalStats.snapshot_date.desc())
         .first()
     )
+
+
+def get_user_by_phone(db: Session, phone_number: str) -> models.User | None:
+    return db.query(models.User).filter(models.User.phone_number == phone_number).first()
+
+
+def create_alert(
+    db: Session,
+    farm_id: int,
+    severity: StressSeverity,
+    as_of_date: date,
+    days_to_stress: int | None,
+    provider_message_sid: str | None,
+) -> models.Alert:
+    alert = models.Alert(
+        farm_id=farm_id,
+        severity=severity,
+        as_of_date=as_of_date,
+        days_to_stress=days_to_stress,
+        provider_message_sid=provider_message_sid,
+    )
+    db.add(alert)
+    db.commit()
+    db.refresh(alert)
+    return alert
+
+
+def get_alert(db: Session, farm_id: int, as_of_date: date, severity: StressSeverity) -> models.Alert | None:
+    return (
+        db.query(models.Alert)
+        .filter(
+            models.Alert.farm_id == farm_id,
+            models.Alert.as_of_date == as_of_date,
+            models.Alert.severity == severity,
+        )
+        .first()
+    )
+
+
+def get_previous_severity(db: Session, farm_id: int, before_date: date) -> StressSeverity | None:
+    """Severity of the newest sim output strictly before before_date — the
+    baseline the alert dispatcher compares against for escalation."""
+    row = (
+        db.query(models.AquaCropOutput)
+        .filter(
+            models.AquaCropOutput.farm_id == farm_id,
+            models.AquaCropOutput.as_of_date < before_date,
+        )
+        .order_by(models.AquaCropOutput.as_of_date.desc())
+        .first()
+    )
+    return row.severity if row is not None else None
+
+
+def get_latest_alert_for_user(db: Session, user_id: int, since: datetime | None = None) -> models.Alert | None:
+    """Newest alert across all the user's farms — an SMS reply has no farm
+    context, so it attaches to whatever was alerted most recently."""
+    query = (
+        db.query(models.Alert)
+        .join(models.Farm, models.Alert.farm_id == models.Farm.id)
+        .filter(models.Farm.user_id == user_id)
+    )
+    if since is not None:
+        query = query.filter(models.Alert.sent_at >= since)
+    return query.order_by(models.Alert.sent_at.desc(), models.Alert.id.desc()).first()
+
+
+def set_alert_feedback(db: Session, alert: models.Alert, feedback: AlertFeedback) -> models.Alert:
+    alert.feedback = feedback
+    alert.feedback_at = func.now()
+    db.commit()
+    db.refresh(alert)
+    return alert
+
+
+def get_alerts_by_farm(db: Session, farm_id: int, skip: int = 0, limit: int = 10) -> list[models.Alert]:
+    return (
+        db.query(models.Alert)
+        .filter(models.Alert.farm_id == farm_id)
+        .order_by(models.Alert.sent_at.desc(), models.Alert.id.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+
+
+def count_alerts_by_farm(db: Session, farm_id: int) -> int:
+    return db.query(models.Alert).filter(models.Alert.farm_id == farm_id).count()
 
 
 def create_job_run(db: Session, job_name: str) -> models.JobRun:

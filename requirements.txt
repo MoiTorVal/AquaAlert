@@ -36,6 +36,8 @@ testcontainers[postgres]==4.14.2
 pytest-cov==7.1.0
 python-dateutil==2.9.0.post0
 python-dotenv==1.2.2
+# starlette requires it for request.form() (Twilio webhook payloads)
+python-multipart==0.0.32
 PyJWT==2.9.0
 reportlab==4.5.1
 rsa==4.9.1

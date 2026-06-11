@@ -252,6 +252,16 @@ def update_me(
     # clears an equity answer (voluntary self-ID, must be revocable)
     for key, value in body.model_dump(exclude_unset=True).items():
         setattr(current_user, key, value)
-    db.commit()
+    # checked post-assignment so it also catches clearing the phone while
+    # leaving alerts on
+    if current_user.sms_alerts_enabled and current_user.phone_number is None:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="SMS alerts require a phone number")
+    try:
+        db.commit()
+    except IntegrityError:
+        # unique index on users.phone_number
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Phone number already in use")
     db.refresh(current_user)
     return current_user
