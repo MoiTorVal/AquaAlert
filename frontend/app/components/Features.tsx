@@ -1,23 +1,23 @@
-import { LucideIcon, Droplets, Cloud, TrendingUp, Bell } from "lucide-react";
+import { LucideIcon, Satellite, Droplets, TrendingUp, Bell } from "lucide-react";
 
 export default function Features() {
   const features: { title: string; description: string; icon: LucideIcon }[] = [
     {
-      title: "Soil Monitoring",
+      title: "Satellite Field Monitoring",
       description:
-        "Track soil moisture levels across all your fields in real time with sensor-driven data.",
+        "Daily field-level water data from OpenET satellites — no sensors, no hardware to install.",
+      icon: Satellite,
+    },
+    {
+      title: "Crop Water Simulation",
+      description:
+        "Your field's water balance, modeled daily with AquaCrop — the UN FAO's crop model.",
       icon: Droplets,
     },
     {
-      title: "Weather Integration",
+      title: "Days-Ahead Stress Warnings",
       description:
-        "Automatic weather data collection including rainfall, temperature, humidity, and evapotranspiration.",
-      icon: Cloud,
-    },
-    {
-      title: "Stress Predictions",
-      description:
-        "ML-powered forecasts that tell you when water stress is coming days before it happens.",
+        "Know how many days of water your crop has left, before stress is visible in the field.",
       icon: TrendingUp,
     },
     {
