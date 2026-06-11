@@ -325,3 +325,34 @@ def test_patch_me_rejects_unknown_locale(client):
 def test_patch_me_unauthenticated(unauthed_client):
     response = unauthed_client.patch("/auth/me", json={"locale": "es"})
     assert response.status_code == 401
+
+
+# ── password length limits ───────────────────────────────────────────────────
+
+
+def test_signup_rejects_password_over_72_bytes(unauthed_client):
+    # bcrypt only hashes the first 72 bytes; we reject instead of truncating
+    response = unauthed_client.post("/auth/signup", json={
+        "email": "longpw@example.com",
+        "password": "x" * 73,
+        "name": "Long",
+    })
+    assert response.status_code == 422
+
+
+def test_signup_rejects_password_over_72_bytes_multibyte(unauthed_client):
+    # 25 chars but 75 bytes in UTF-8 — the byte limit is what bcrypt sees
+    response = unauthed_client.post("/auth/signup", json={
+        "email": "emoji@example.com",
+        "password": "€" * 25,
+        "name": "Emoji",
+    })
+    assert response.status_code == 422
+
+
+def test_reset_password_rejects_password_over_72_bytes(unauthed_client):
+    response = unauthed_client.post("/auth/reset-password", json={
+        "token": "irrelevant",
+        "new_password": "x" * 73,
+    })
+    assert response.status_code == 422

@@ -16,7 +16,9 @@ class Settings(BaseSettings):
     # Dev-only: log password-reset links until email delivery ships. Never
     # enable in production — the token is a live credential.
     log_reset_links: bool = False
-    secure_cookie: bool = False
+    # Fail-safe default: auth cookie is HTTPS-only unless dev explicitly
+    # opts out (local HTTP dev sets SECURE_COOKIE=false in .env).
+    secure_cookie: bool = True
     # Opt-in: jobs hit the OpenET quota, so dev/test default to off. Deploy
     # sets SCHEDULER_ENABLED=true on exactly one single-worker process —
     # APScheduler has no cross-process lock, N workers = N duplicate runs.

@@ -6,9 +6,11 @@ GSAs publish their own templates — before pilot submission, diff this output
 against the partner GSA's current form and adjust column names/order here.
 """
 import calendar
+import csv
 import io
 from datetime import date
 from decimal import Decimal
+from xml.sax.saxutils import escape
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
@@ -28,6 +30,16 @@ def _acre_feet(gallons: Decimal) -> Decimal:
     return round(gallons / GALLONS_PER_ACRE_FOOT, 4)
 
 
+def _formula_safe(value: str) -> str:
+    """Neutralize spreadsheet formula injection (CWE-1236). Excel/Sheets
+    execute cells starting with = + - @ when the CSV is opened — and this
+    file's audience is a GSA office, so user-controlled text must not
+    become a live formula on their machine."""
+    if value and value[0] in "=+-@\t\r":
+        return "'" + value
+    return value
+
+
 def monthly_rows(monthly_gallons: dict[int, Decimal]) -> list[tuple[str, Decimal, Decimal]]:
     return [
         (
@@ -40,20 +52,22 @@ def monthly_rows(monthly_gallons: dict[int, Decimal]) -> list[tuple[str, Decimal
 
 
 def build_csv(farm: models.Farm, year: int, monthly_gallons: dict[int, Decimal]) -> str:
-    lines = [
-        f"# SGMA Groundwater Extraction Report — {year}",
-        f"# Farm: {farm.name}",
-        f"# Water source: {farm.water_source.value if farm.water_source else 'unreported'}",
-        f"# Acreage: {farm.acreage_acres if farm.acreage_acres is not None else 'unreported'}",
-        f"# Generated: {date.today().isoformat()} by AquaAlert from farmer-logged irrigation events",
-        CSV_HEADER,
-    ]
+    # csv.writer quotes embedded commas/newlines so a crafted farm name
+    # can't inject rows; _formula_safe defuses leading formula characters.
+    buffer = io.StringIO()
+    writer = csv.writer(buffer, lineterminator="\n")
+    writer.writerow([f"# SGMA Groundwater Extraction Report — {year}"])
+    writer.writerow([f"# Farm: {_formula_safe(farm.name)}"])
+    writer.writerow([f"# Water source: {farm.water_source.value if farm.water_source else 'unreported'}"])
+    writer.writerow([f"# Acreage: {farm.acreage_acres if farm.acreage_acres is not None else 'unreported'}"])
+    writer.writerow([f"# Generated: {date.today().isoformat()} by AquaAlert from farmer-logged irrigation events"])
+    writer.writerow(CSV_HEADER.split(","))
     total = Decimal("0")
     for month, gallons, acre_feet in monthly_rows(monthly_gallons):
         total += gallons
-        lines.append(f"{month},{gallons},{acre_feet}")
-    lines.append(f"TOTAL,{total},{_acre_feet(total)}")
-    return "\n".join(lines) + "\n"
+        writer.writerow([month, gallons, acre_feet])
+    writer.writerow(["TOTAL", total, _acre_feet(total)])
+    return buffer.getvalue()
 
 
 def build_pdf(farm: models.Farm, year: int, monthly_gallons: dict[int, Decimal]) -> bytes:
@@ -81,7 +95,9 @@ def build_pdf(farm: models.Farm, year: int, monthly_gallons: dict[int, Decimal])
     acreage = f"{farm.acreage_acres} acres" if farm.acreage_acres is not None else "unreported"
     doc.build([
         Paragraph(f"SGMA Groundwater Extraction Report — {year}", styles["Title"]),
-        Paragraph(f"Farm: {farm.name}", styles["Normal"]),
+        # Paragraph parses XML-ish markup — unescaped user text can inject
+        # tags or crash the build on malformed ones.
+        Paragraph(f"Farm: {escape(farm.name)}", styles["Normal"]),
         Paragraph(f"Water source: {source} · Acreage: {acreage}", styles["Normal"]),
         Paragraph(
             f"Generated {date.today().isoformat()} by AquaAlert from farmer-logged irrigation events.",

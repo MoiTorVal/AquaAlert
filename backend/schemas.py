@@ -5,7 +5,23 @@ from typing import Optional
 from datetime import datetime, date
 from geoalchemy2.elements import WKBElement
 from geoalchemy2.shape import to_shape
+from shapely import wkt as shapely_wkt
+from shapely.errors import ShapelyError
 from backend.enums import SoilTexture, StressSeverity, WaterSource, Locale, Tier, IrrigationSource
+
+# Leaflet-draw field boundaries run tens of vertices; this only blocks
+# abusive payloads that would bloat the DB row and the OpenET request body.
+MAX_POLYGON_VERTICES = 1000
+
+
+def _password_strength(v: str) -> str:
+    if len(v) < 8:
+        raise ValueError("Password must be at least 8 characters")
+    # bcrypt hashes only the first 72 bytes — reject instead of silently
+    # ignoring everything past the limit.
+    if len(v.encode("utf-8")) > 72:
+        raise ValueError("Password must be at most 72 bytes")
+    return v
 
 class FarmBase(BaseModel):
     name: str
@@ -24,9 +40,31 @@ class FarmBase(BaseModel):
     pump_lift_ft: Optional[float] = None
     acreage_acres: Optional[float] = None
 
-class FarmUpdate(FarmBase):
+class FarmWrite(FarmBase):
+    """Write-side validation only — FarmResponse must not re-parse trusted
+    DB geometry on every read (and must never 500 on legacy rows)."""
+
+    @field_validator("field_polygon")
+    @classmethod
+    def _validate_polygon(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        try:
+            geom = shapely_wkt.loads(v)
+        except ShapelyError as exc:
+            raise ValueError("field_polygon must be valid WKT") from exc
+        if geom.geom_type != "Polygon":
+            raise ValueError("field_polygon must be a POLYGON")
+        if not geom.is_valid:
+            raise ValueError("field_polygon must be a valid polygon (no self-intersections)")
+        vertex_count = len(geom.exterior.coords) + sum(len(ring.coords) for ring in geom.interiors)
+        if vertex_count > MAX_POLYGON_VERTICES:
+            raise ValueError(f"field_polygon exceeds {MAX_POLYGON_VERTICES} vertices")
+        return v
+
+class FarmUpdate(FarmWrite):
     name: Optional[str] = None
-class FarmCreate(FarmBase):
+class FarmCreate(FarmWrite):
     pass
 class FarmResponse(FarmBase):
     id: int
@@ -86,10 +124,8 @@ class SignupRequest(BaseModel):
     name: str
     @field_validator("password")
     @classmethod
-    def password_min_length(cls, v: str) -> str:
-        if len(v) < 8:
-            raise ValueError("Password must be at least 8 characters")
-        return v
+    def password_strength(cls, v: str) -> str:
+        return _password_strength(v)
 
 class LoginRequest(BaseModel):
     email: EmailStr
@@ -123,10 +159,8 @@ class ResetPasswordRequest(BaseModel):
 
     @field_validator("new_password")
     @classmethod
-    def password_min_length(cls, v: str) -> str:
-        if len(v) < 8:
-            raise ValueError("Password must be at least 8 characters")
-        return v
+    def password_strength(cls, v: str) -> str:
+        return _password_strength(v)
 
 class AquaCropOutputBase(BaseModel):
     as_of_date: date
