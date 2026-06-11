@@ -59,7 +59,6 @@ class Farm(Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     location: Mapped[str | None] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    area_hectares: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
     crop_type: Mapped[str | None] = mapped_column(String(100))
     soil_type: Mapped[SoilTexture | None] = mapped_column(
         SAEnum(SoilTexture, name="soiltexture", values_callable=_enum_values), nullable=True

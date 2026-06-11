@@ -18,7 +18,6 @@ const farm = {
   user_id: 1,
   name: "Farm",
   location: null,
-  area_hectares: null,
   crop_type: null,
   soil_type: null,
   root_depth_cm: null,

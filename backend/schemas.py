@@ -10,7 +10,6 @@ from backend.enums import SoilTexture, StressSeverity, WaterSource, Locale, Tier
 class FarmBase(BaseModel):
     name: str
     location: Optional[str] = None
-    area_hectares: Optional[float] = None
     crop_type: Optional[str] = None
     root_depth_cm: Optional[float] = None
     growth_stage: Optional[str] = None
