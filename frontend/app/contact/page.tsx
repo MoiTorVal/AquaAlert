@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Input from "../components/Input";
 import Image from "next/image";
+import { useForm, ValidationError } from "@formspree/react";
 
 interface FormFields {
   name: string;
@@ -32,6 +33,8 @@ function validate(fields: FormFields): FormErrors {
 }
 
 export default function ContactPage() {
+  const [state, formspreeSubmit] = useForm("xjgdebzq");
+
   const [fields, setFields] = useState<FormFields>({
     name: "",
     email: "",
@@ -39,8 +42,16 @@ export default function ContactPage() {
     message: "",
   });
   const [errors, setErrors] = useState<FormErrors>({});
-  const [loading, setLoading] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+
+  const submitted = state.succeeded;
+  const loading = state.submitting;
+
+  useEffect(() => {
+    if (state.succeeded) {
+      setFields({ name: "", email: "", subject: "", message: "" });
+      setErrors({});
+    }
+  }, [state.succeeded]);
 
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
@@ -56,10 +67,7 @@ export default function ContactPage() {
       setErrors(validationErrors);
       return;
     }
-    setLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setLoading(false);
-    setSubmitted(true);
+    await formspreeSubmit(e);
   }
 
   return (
@@ -76,7 +84,7 @@ export default function ContactPage() {
           {/* Left — image */}
           <div className="rounded-2xl overflow-hidden bg-white/5 aspect-[4/3] relative">
             <Image
-              src="/images/contact.png"
+              src="/images/IMG_4212.jpg"
               alt="Irrigated crop field at sunrise"
               fill
               className="object-cover"
@@ -121,6 +129,12 @@ export default function ContactPage() {
                 />
               </div>
 
+              <ValidationError
+                prefix="Email"
+                field="email"
+                errors={state.errors}
+              />
+
               <Input
                 label="Subject"
                 name="subject"
@@ -141,11 +155,18 @@ export default function ContactPage() {
                 rows={5}
               />
 
+              <ValidationError
+                prefix="Message"
+                field="message"
+                errors={state.errors}
+              />
+
+              <ValidationError errors={state.errors} />
+
               <button
                 type="submit"
                 disabled={loading}
-                className="bg-btn-secondary hover:bg-white disabled:opacity-50 text-btn-text font-semibold px-8
-py-3 rounded-lg transition-colors w-fit"
+                className="bg-btn-secondary hover:bg-white disabled:opacity-50 text-btn-text font-semibold px-8 py-3 rounded-lg transition-colors w-fit"
               >
                 {loading ? "Sending..." : "Send Message"}
               </button>
