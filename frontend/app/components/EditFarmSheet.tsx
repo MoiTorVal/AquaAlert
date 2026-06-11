@@ -6,6 +6,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { updateFarm, type Farm } from "../lib/api";
 import {
   EditFarmFormSchema,
+  SOIL_TEXTURES,
+  soilLabel,
   type EditFarmFormValues,
 } from "../lib/validators";
 
@@ -30,6 +32,8 @@ export default function EditFarmSheet({
       location: farm.location ?? "",
       crop_type: farm.crop_type ?? "",
       planting_date: farm.planting_date ?? "",
+      soil_type: farm.soil_type ?? "",
+      acreage_acres: farm.acreage_acres?.toString() ?? "",
     },
     mode: "onBlur",
   });
@@ -42,6 +46,10 @@ export default function EditFarmSheet({
         location: values.location || null,
         crop_type: values.crop_type || null,
         planting_date: values.planting_date || null,
+        soil_type: values.soil_type || null,
+        acreage_acres: values.acreage_acres
+          ? Number(values.acreage_acres)
+          : null,
       });
       onSaved(saved);
       onClose();
@@ -52,14 +60,17 @@ export default function EditFarmSheet({
     }
   };
 
+  const inputClass = "mt-1 w-full rounded-lg border border-gray-300 p-2";
+
   return (
     <div
-      className="fixed inset-0 z-20 flex items-end justify-center bg-black/40 sm:items-center"
+      // z-[60] keeps the dialog above the fixed navbar (z-50)
+      className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 sm:items-center"
       role="dialog"
       aria-modal="true"
       aria-label={`Edit ${farm.name}`}
     >
-      <div className="w-full max-w-md rounded-t-2xl bg-white p-6 sm:rounded-2xl">
+      <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-white p-6 sm:rounded-2xl">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Edit farm</h2>
           <button
@@ -75,36 +86,51 @@ export default function EditFarmSheet({
         <form onSubmit={handleSubmit(onSubmit)} className="mt-4 flex flex-col gap-4">
           <label className="text-sm">
             <span className="text-gray-700">Name</span>
-            <input
-              {...register("name")}
-              className="mt-1 w-full rounded-lg border border-gray-300 p-2"
-            />
+            <input {...register("name")} className={inputClass} />
             {errors.name && (
               <span className="text-xs text-red-600">{errors.name.message}</span>
             )}
           </label>
           <label className="text-sm">
             <span className="text-gray-700">Location</span>
-            <input
-              {...register("location")}
-              className="mt-1 w-full rounded-lg border border-gray-300 p-2"
-            />
+            <input {...register("location")} className={inputClass} />
           </label>
           <label className="text-sm">
             <span className="text-gray-700">Crop</span>
-            <input
-              {...register("crop_type")}
-              className="mt-1 w-full rounded-lg border border-gray-300 p-2"
-            />
+            <input {...register("crop_type")} className={inputClass} />
           </label>
           <label className="text-sm">
             <span className="text-gray-700">Planting date</span>
-            <input
-              type="date"
-              {...register("planting_date")}
-              className="mt-1 w-full rounded-lg border border-gray-300 p-2"
-            />
+            <input type="date" {...register("planting_date")} className={inputClass} />
           </label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="text-sm">
+              <span className="text-gray-700">Soil type</span>
+              <select {...register("soil_type")} className={inputClass}>
+                <option value="">—</option>
+                {SOIL_TEXTURES.map((s) => (
+                  <option key={s} value={s}>
+                    {soilLabel(s)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-sm">
+              <span className="text-gray-700">Acres</span>
+              <input
+                type="number"
+                inputMode="decimal"
+                step="any"
+                {...register("acreage_acres")}
+                className={inputClass}
+              />
+              {errors.acreage_acres && (
+                <span className="text-xs text-red-600">
+                  {errors.acreage_acres.message}
+                </span>
+              )}
+            </label>
+          </div>
 
           {serverError && (
             <p role="alert" className="text-sm text-red-600">

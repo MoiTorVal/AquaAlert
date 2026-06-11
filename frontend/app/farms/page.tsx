@@ -6,8 +6,17 @@ import { useRouter } from "next/navigation";
 import { deleteFarm, getFarms, type Farm } from "../lib/api";
 import EditFarmSheet from "../components/EditFarmSheet";
 import CreateFarmSheet from "../components/CreateFarmSheet";
+import ProtectedRoute from "../components/ProtectedRoute";
 
 export default function FarmsPage() {
+  return (
+    <ProtectedRoute>
+      <FarmsContent />
+    </ProtectedRoute>
+  );
+}
+
+function FarmsContent() {
   const router = useRouter();
   const [farms, setFarms] = useState<Farm[]>([]);
   const [creating, setCreating] = useState(false);
@@ -19,10 +28,8 @@ export default function FarmsPage() {
   useEffect(() => {
     getFarms()
       .then(setFarms)
-      .catch((err) => {
-        setError(
-          `Failed to load farms. Please try again later. ${err.message}`,
-        );
+      .catch(() => {
+        setError("Failed to load farms. Please try again later.");
       })
       .finally(() => setLoading(false));
   }, []);

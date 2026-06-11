@@ -20,8 +20,10 @@ const LOCATE_ZOOM = 16;
 // loaded with next/dynamic({ ssr: false }).
 export default function FieldMapDraw({
   onChange,
+  onDrawingChange,
 }: {
   onChange: (wkt: string | null) => void;
+  onDrawingChange?: (drawing: boolean) => void;
 }) {
   return (
     // relative z-0 isolate traps Leaflet's internal z-indexes (up to ~1000)
@@ -34,7 +36,7 @@ export default function FieldMapDraw({
       >
         <TileLayer attribution={IMAGERY_ATTRIBUTION} url={IMAGERY_URL} />
         <TileLayer url={LABELS_URL} />
-        <DrawControl onChange={onChange} />
+        <DrawControl onChange={onChange} onDrawingChange={onDrawingChange} />
         <LocateButton />
       </MapContainer>
     </div>
@@ -90,14 +92,22 @@ function LocateButton() {
   );
 }
 
-function DrawControl({ onChange }: { onChange: (wkt: string | null) => void }) {
+function DrawControl({
+  onChange,
+  onDrawingChange,
+}: {
+  onChange: (wkt: string | null) => void;
+  onDrawingChange?: (drawing: boolean) => void;
+}) {
   const map = useMap();
   // Latest-callback ref: the draw handlers below are bound once, so they read
   // onChange through a ref kept current outside of render (react-hooks/refs).
   const onChangeRef = useRef(onChange);
+  const onDrawingChangeRef = useRef(onDrawingChange);
   useEffect(() => {
     onChangeRef.current = onChange;
-  }, [onChange]);
+    onDrawingChangeRef.current = onDrawingChange;
+  }, [onChange, onDrawingChange]);
 
   useEffect(() => {
     const drawn = new L.FeatureGroup();
@@ -131,14 +141,20 @@ function DrawControl({ onChange }: { onChange: (wkt: string | null) => void }) {
       drawn.addLayer((event as L.DrawEvents.Created).layer);
       emit();
     };
+    const onDrawStart = () => onDrawingChangeRef.current?.(true);
+    const onDrawStop = () => onDrawingChangeRef.current?.(false);
     map.on(L.Draw.Event.CREATED, onCreated);
     map.on(L.Draw.Event.EDITED, emit);
     map.on(L.Draw.Event.DELETED, emit);
+    map.on(L.Draw.Event.DRAWSTART, onDrawStart);
+    map.on(L.Draw.Event.DRAWSTOP, onDrawStop);
 
     return () => {
       map.off(L.Draw.Event.CREATED, onCreated);
       map.off(L.Draw.Event.EDITED, emit);
       map.off(L.Draw.Event.DELETED, emit);
+      map.off(L.Draw.Event.DRAWSTART, onDrawStart);
+      map.off(L.Draw.Event.DRAWSTOP, onDrawStop);
       map.removeControl(control);
       map.removeLayer(drawn);
     };

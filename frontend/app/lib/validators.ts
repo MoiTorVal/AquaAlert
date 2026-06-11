@@ -93,13 +93,6 @@ export function gallonsFromForm(values: IrrigationLogFormValues): number {
   return Math.round(Number(values.hours) * Number(values.gpm) * 60);
 }
 
-export const EditFarmFormSchema = z.object({
-  name: z.string().trim().min(1, "Name is required"),
-  location: z.string().trim().optional(),
-  crop_type: z.string().trim().optional(),
-  planting_date: z.string().optional(),
-});
-
 export const SOIL_TEXTURES = [
   "Sandy",
   "LoamySand",
@@ -115,7 +108,27 @@ export const SOIL_TEXTURES = [
   "Clay",
 ] as const;
 
+/** "SandyClayLoam" -> "Sandy Clay Loam" — display only; the API keeps the enum value. */
+export function soilLabel(value: string): string {
+  return value.replace(/([a-z])([A-Z])/g, "$1 $2");
+}
+
 export const CreateFarmFormSchema = z.object({
+  name: z.string().trim().min(1, "Name is required"),
+  location: z.string().trim().optional(),
+  crop_type: z.string().trim().optional(),
+  planting_date: z.string().optional(),
+  soil_type: z.enum(SOIL_TEXTURES).or(z.literal("")).optional(),
+  acreage_acres: z
+    .string()
+    .optional()
+    .refine(
+      (v) => !v || (!Number.isNaN(Number(v)) && Number(v) > 0),
+      "Must be more than 0",
+    ),
+});
+
+export const EditFarmFormSchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
   location: z.string().trim().optional(),
   crop_type: z.string().trim().optional(),

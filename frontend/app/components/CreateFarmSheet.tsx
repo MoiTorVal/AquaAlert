@@ -9,6 +9,7 @@ import { createFarm, type Farm } from "../lib/api";
 import {
   CreateFarmFormSchema,
   SOIL_TEXTURES,
+  soilLabel,
   type CreateFarmFormValues,
 } from "../lib/validators";
 
@@ -30,6 +31,7 @@ export default function CreateFarmSheet({
   const t = useTranslations("createFarm");
   const [serverError, setServerError] = useState<string | null>(null);
   const [fieldPolygon, setFieldPolygon] = useState<string | null>(null);
+  const [drawing, setDrawing] = useState(false);
   const {
     register,
     handleSubmit,
@@ -66,7 +68,8 @@ export default function CreateFarmSheet({
 
   return (
     <div
-      className="fixed inset-0 z-20 flex items-end justify-center bg-black/40 sm:items-center"
+      // z-[60] keeps the dialog above the fixed navbar (z-50)
+      className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 sm:items-center"
       role="dialog"
       aria-modal="true"
       aria-label={t("title")}
@@ -119,7 +122,7 @@ export default function CreateFarmSheet({
                 <option value="">—</option>
                 {SOIL_TEXTURES.map((s) => (
                   <option key={s} value={s}>
-                    {s}
+                    {soilLabel(s)}
                   </option>
                 ))}
               </select>
@@ -145,13 +148,26 @@ export default function CreateFarmSheet({
             <span className="text-gray-700">{t("fieldBoundary")}</span>
             <p className="mt-1 text-xs text-gray-500">{t("fieldBoundaryHint")}</p>
             <div className="mt-2">
-              <FieldMapDraw onChange={setFieldPolygon} />
+              <FieldMapDraw
+                onChange={setFieldPolygon}
+                onDrawingChange={setDrawing}
+              />
             </div>
             <p
               role="status"
-              className={`mt-1 text-xs ${fieldPolygon ? "text-green-700" : "text-gray-400"}`}
+              className={`mt-1 text-xs ${
+                drawing
+                  ? "text-amber-600"
+                  : fieldPolygon
+                    ? "text-green-700"
+                    : "text-gray-400"
+              }`}
             >
-              {fieldPolygon ? t("boundaryCaptured") : t("boundaryPending")}
+              {drawing
+                ? t("boundaryDrawing")
+                : fieldPolygon
+                  ? t("boundaryCaptured")
+                  : t("boundaryPending")}
             </p>
           </div>
 

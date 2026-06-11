@@ -9,6 +9,7 @@ import {
   type SavingsSeries,
 } from "../../../lib/api";
 import WeeklySavingsChart from "../../../components/WeeklySavingsChart";
+import ProtectedRoute from "../../../components/ProtectedRoute";
 
 type LoadState =
   | { status: "loading" }
@@ -20,6 +21,14 @@ export default function SavingsPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  return (
+    <ProtectedRoute>
+      <SavingsContent params={params} />
+    </ProtectedRoute>
+  );
+}
+
+function SavingsContent({ params }: { params: Promise<{ id: string }> }) {
   const t = useTranslations("savingsPage");
   const locale = useLocale();
   const { id } = use(params);

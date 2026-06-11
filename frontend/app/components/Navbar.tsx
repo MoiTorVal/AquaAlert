@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import Logo from "./Logo";
 import LocaleToggle from "./LocaleToggle";
 import { useAuth } from "../context/AuthContext";
@@ -14,6 +15,7 @@ const mobileNavLink =
   "text-white/80 hover:text-white hover:bg-muted/20 px-3 py-2.5 rounded-lg transition-colors text-base";
 
 export default function Navbar() {
+  const t = useTranslations("navbar");
   const { user, setUser } = useAuth();
 
   const [scrolled, setScrolled] = useState(false);
@@ -47,10 +49,15 @@ export default function Navbar() {
         <div className="hidden md:flex items-center gap-6 text-sm font-medium">
           <div className="hidden md:flex items-center gap-6 text-sm font-medium">
             <Link href="/" className={navLink}>
-              Home
+              {t("home")}
             </Link>
+            {user && (
+              <Link href="/farms" className={navLink}>
+                {t("myFarms")}
+              </Link>
+            )}
             <Link href="/contact" className={navLink}>
-              Contact
+              {t("contact")}
             </Link>
             <LocaleToggle />
             <span className="w-px h-4 bg-white/20" />
@@ -63,19 +70,19 @@ export default function Navbar() {
                     .catch(() => setUser(null))
                 }
               >
-                Log Out
+                {t("logout")}
               </button>
             ) : (
               <>
                 <Link href="/login" className={navLink}>
-                  Log In
+                  {t("login")}
                 </Link>
                 <Link
                   href="/signup"
-                  className="bg-btn-secondary hover:bg-white text-btn-text font-semibold px-4 py-1.5 
+                  className="bg-btn-secondary hover:bg-white text-btn-text font-semibold px-4 py-1.5
   rounded-lg transition-colors"
                 >
-                  Sign up
+                  {t("signup")}
                 </Link>
               </>
             )}
@@ -122,14 +129,23 @@ export default function Navbar() {
             className={mobileNavLink}
             onClick={() => setMenuOpen(false)}
           >
-            Home
+            {t("home")}
           </Link>
+          {user && (
+            <Link
+              href="/farms"
+              className={mobileNavLink}
+              onClick={() => setMenuOpen(false)}
+            >
+              {t("myFarms")}
+            </Link>
+          )}
           <Link
             href="/contact"
             className={mobileNavLink}
             onClick={() => setMenuOpen(false)}
           >
-            Contact
+            {t("contact")}
           </Link>
           {user ? (
             <button
@@ -141,7 +157,7 @@ export default function Navbar() {
                 setMenuOpen(false);
               }}
             >
-              Log Out
+              {t("logout")}
             </button>
           ) : (
             <>
@@ -150,7 +166,7 @@ export default function Navbar() {
                 className={mobileNavLink}
                 onClick={() => setMenuOpen(false)}
               >
-                Log In
+                {t("login")}
               </Link>
               <Link
                 href="/signup"
@@ -158,7 +174,7 @@ export default function Navbar() {
 transition-colors text-center mt-2"
                 onClick={() => setMenuOpen(false)}
               >
-                Sign up
+                {t("signup")}
               </Link>
             </>
           )}

@@ -2,15 +2,26 @@
   "navbar": {
     "language": "Idioma",
     "english": "English",
-    "spanish": "Español"
+    "spanish": "Español",
+    "home": "Inicio",
+    "myFarms": "Mis Ranchos",
+    "contact": "Contacto",
+    "login": "Iniciar sesión",
+    "signup": "Regístrate",
+    "logout": "Cerrar sesión"
   },
   "farmDetail": {
     "back": "← Mis ranchos",
     "logIrrigation": "+ Registrar riego",
+    "edit": "Editar",
     "field": "Parcela",
     "crop": "Cultivo",
     "planted": "Sembrado",
     "soil": "Suelo",
+    "irrigationHistory": "Riegos recientes",
+    "noIrrigations": "Aún no hay riegos registrados — toque \"+ Registrar riego\" después de regar.",
+    "gallonsValue": "{gallons} gal",
+    "estimated": "Estimado",
     "notFound": "Rancho no encontrado",
     "backToFarms": "Volver a mis ranchos",
     "errorTitle": "Algo salió mal",
@@ -165,8 +176,9 @@
     "failed": "No se pudo crear el rancho",
     "fieldBoundary": "Límite de la parcela (opcional)",
     "fieldBoundaryHint": "Acerque el mapa a su parcela y use la herramienta de polígono para trazar sus bordes. Haga clic en el primer punto otra vez para terminar. Los datos satelitales de agua necesitan este límite.",
-    "boundaryCaptured": "✓ Límite capturado",
-    "boundaryPending": "Aún no se ha dibujado el límite"
+    "boundaryCaptured": "✓ Límite guardado",
+    "boundaryPending": "Aún no se ha dibujado el límite",
+    "boundaryDrawing": "Dibujando — haga clic en el primer punto otra vez o presione Finish para guardar la forma"
   },
   "fieldMap": {
     "locate": "Buscar mi parcela",
