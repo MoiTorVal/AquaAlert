@@ -97,8 +97,18 @@ class WeatherReadingCreate(BaseModel):
     rainfall_mm: float
     wind_speed_kph: float
     
-class WeatherReadingResponse(WeatherReadingCreate):
+# Not WeatherReadingCreate: scheduler rainfall rows fill only rainfall_mm,
+# so every measurement field must serialize as nullable.
+class WeatherReadingResponse(BaseModel):
     id: int
+    farm_id: int
+    recorded_at: datetime
+    location: str | None = None
+    temperature_c: float | None = None
+    humidity_pct: float | None = None
+    description: str | None = None
+    rainfall_mm: float | None = None
+    wind_speed_kph: float | None = None
     model_config = ConfigDict(from_attributes=True)
 
 class PaginatedWeatherResponse(BaseModel):

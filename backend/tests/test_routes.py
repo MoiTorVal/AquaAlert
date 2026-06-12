@@ -229,6 +229,21 @@ def test_get_weather_readings_unknown_farm(client):
     assert response.status_code == 404
 
 
+def test_get_weather_readings_serializes_rainfall_only_rows(client, db, farm):
+    """Scheduler rainfall rows leave every other measurement NULL — the
+    endpoint must serialize them instead of 500ing on validation."""
+    crud.upsert_rainfall_readings(db, farm.id, [{"reading_date": date(2026, 6, 8), "precip_mm": 7.5}])
+
+    response = client.get(f"/farms/{farm.id}/weather")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 1
+    row = body["results"][0]
+    assert row["rainfall_mm"] == 7.5
+    assert row["temperature_c"] is None
+    assert row["location"] is None
+
+
 # ── pagination caps ──────────────────────────────────────────────────────────
 
 
