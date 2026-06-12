@@ -23,8 +23,8 @@ jobs:
       DB_PORT: "5432"
       NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           # matches the project venv; shapely 2.0.6 has no 3.14 wheels yet
           python-version: "3.13"
@@ -42,8 +42,8 @@ jobs:
     env:
       NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: npm
