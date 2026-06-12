@@ -71,7 +71,11 @@
     "etValue": "{inches} pulg",
     "etAsOf": "al {date}",
     "holdsWater": "Retiene ~{awc} pulg/pie de agua",
-    "acInWeek": "≈ {acin} ac-in"
+    "acInWeek": "≈ {acin} ac-in",
+    "eventActions": "Acciones para el riego del {date}",
+    "deleteEvent": "Eliminar",
+    "deleteEventConfirm": "¿Eliminar este registro — {gallons} gal del {date}? Esto no se puede deshacer.",
+    "deleteEventFailed": "No se pudo eliminar el registro"
   },
   "soil": {
     "Sandy": "Arenoso",
@@ -164,7 +168,9 @@
     "pumpFlow": "Flujo de la bomba (GPM)",
     "save": "Guardar riego",
     "saving": "Guardando…",
-    "failed": "No se pudo registrar el riego"
+    "failed": "No se pudo registrar el riego",
+    "editTitle": "Editar riego",
+    "saveChanges": "Guardar cambios"
   },
   "glossary": {
     "ariaLabel": "¿Qué es {term}?",

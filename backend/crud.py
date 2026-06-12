@@ -156,6 +156,41 @@ def create_irrigation_event(
     return db_event
 
 
+def get_irrigation_event(
+    db: Session, farm_id: int, event_id: int
+) -> models.IrrigationEvent | None:
+    return (
+        db.query(models.IrrigationEvent)
+        .filter(
+            models.IrrigationEvent.id == event_id,
+            models.IrrigationEvent.farm_id == farm_id,
+        )
+        .first()
+    )
+
+
+def update_irrigation_event(
+    db: Session, db_event: models.IrrigationEvent, event: IrrigationEventCreate
+) -> models.IrrigationEvent:
+    # Full replace: a gallons-only correction must also clear stale
+    # hours_run/pump_gpm left over from an earlier runtime-mode log.
+    for key, value in event.model_dump().items():
+        setattr(db_event, key, value)
+    # A human correction supersedes an SMS-estimated row.
+    db_event.source = IrrigationSource.USER_LOG
+    db.commit()
+    db.refresh(db_event)
+    return db_event
+
+
+def delete_irrigation_event(
+    db: Session, db_event: models.IrrigationEvent
+) -> models.IrrigationEvent:
+    db.delete(db_event)
+    db.commit()
+    return db_event
+
+
 def get_latest_irrigation_event(db: Session, farm_id: int) -> models.IrrigationEvent | None:
     return (
         db.query(models.IrrigationEvent)

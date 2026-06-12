@@ -71,7 +71,11 @@
     "etValue": "{inches} in",
     "etAsOf": "as of {date}",
     "holdsWater": "Holds ~{awc} in/ft of water",
-    "acInWeek": "≈ {acin} ac-in"
+    "acInWeek": "≈ {acin} ac-in",
+    "eventActions": "Actions for irrigation on {date}",
+    "deleteEvent": "Delete",
+    "deleteEventConfirm": "Delete this entry — {gallons} gal on {date}? This cannot be undone.",
+    "deleteEventFailed": "Failed to delete entry"
   },
   "soil": {
     "Sandy": "Sandy",
@@ -164,7 +168,9 @@
     "pumpFlow": "Pump flow (GPM)",
     "save": "Save Irrigation",
     "saving": "Saving…",
-    "failed": "Failed to log irrigation"
+    "failed": "Failed to log irrigation",
+    "editTitle": "Edit Irrigation",
+    "saveChanges": "Save Changes"
   },
   "glossary": {
     "ariaLabel": "What is {term}?",

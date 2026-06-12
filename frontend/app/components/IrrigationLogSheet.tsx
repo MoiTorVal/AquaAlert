@@ -4,7 +4,11 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { logIrrigationEvent } from "../lib/api";
+import {
+  logIrrigationEvent,
+  updateIrrigationEvent,
+  type IrrigationEvent,
+} from "../lib/api";
 import {
   IrrigationLogFormSchema,
   gallonsFromForm,
@@ -15,16 +19,37 @@ function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+function defaultsFor(event: IrrigationEvent | null | undefined): IrrigationLogFormValues {
+  if (!event) return { event_date: todayISO(), mode: "gallons" };
+  // Prefill in the mode the entry was logged in.
+  return event.hours_run != null && event.pump_gpm != null
+    ? {
+        event_date: event.event_date,
+        mode: "runtime",
+        hours: String(event.hours_run),
+        gpm: String(event.pump_gpm),
+      }
+    : {
+        event_date: event.event_date,
+        mode: "gallons",
+        gallons: String(event.gallons_applied),
+      };
+}
+
+/** Create sheet by default; pass `event` to edit that entry instead
+ * (mount conditionally so the form picks up the entry's values). */
 export default function IrrigationLogSheet({
   farmId,
   open,
   onClose,
   onLogged,
+  event = null,
 }: {
   farmId: number;
   open: boolean;
   onClose: () => void;
   onLogged: () => void;
+  event?: IrrigationEvent | null;
 }) {
   const t = useTranslations("irrigationLog");
   const [serverError, setServerError] = useState<string | null>(null);
@@ -36,7 +61,7 @@ export default function IrrigationLogSheet({
     formState: { errors, isSubmitting },
   } = useForm<IrrigationLogFormValues>({
     resolver: zodResolver(IrrigationLogFormSchema),
-    defaultValues: { event_date: todayISO(), mode: "gallons" },
+    defaultValues: defaultsFor(event),
     mode: "onBlur",
   });
   const mode = watch("mode");
@@ -46,15 +71,20 @@ export default function IrrigationLogSheet({
   const onSubmit = async (values: IrrigationLogFormValues) => {
     setServerError(null);
     try {
-      await logIrrigationEvent(farmId, {
+      const body = {
         event_date: values.event_date,
         gallons_applied: gallonsFromForm(values),
         ...(values.mode === "runtime" && {
           hours_run: Number(values.hours),
           pump_gpm: Number(values.gpm),
         }),
-      });
-      reset({ event_date: todayISO(), mode: values.mode });
+      };
+      if (event) {
+        await updateIrrigationEvent(farmId, event.id, body);
+      } else {
+        await logIrrigationEvent(farmId, body);
+        reset({ event_date: todayISO(), mode: values.mode });
+      }
       onLogged();
       onClose();
     } catch (err) {
@@ -70,11 +100,13 @@ export default function IrrigationLogSheet({
       className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 sm:items-center"
       role="dialog"
       aria-modal="true"
-      aria-label={t("title")}
+      aria-label={event ? t("editTitle") : t("title")}
     >
       <div className="w-full max-w-md rounded-t-2xl bg-white p-6 sm:rounded-2xl">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">{t("title")}</h2>
+          <h2 className="text-lg font-semibold">
+            {event ? t("editTitle") : t("title")}
+          </h2>
           <button
             type="button"
             onClick={onClose}
@@ -166,7 +198,7 @@ export default function IrrigationLogSheet({
             disabled={isSubmitting}
             className="rounded-lg bg-green-600 py-3 font-medium text-white hover:bg-green-700 disabled:opacity-50"
           >
-            {isSubmitting ? t("saving") : t("save")}
+            {isSubmitting ? t("saving") : event ? t("saveChanges") : t("save")}
           </button>
         </form>
       </div>

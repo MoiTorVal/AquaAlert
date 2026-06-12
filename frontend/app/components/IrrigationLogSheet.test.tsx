@@ -3,14 +3,31 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import IrrigationLogSheet from "./IrrigationLogSheet";
 import { renderWithIntl } from "../test-utils";
-import { logIrrigationEvent } from "../lib/api";
+import {
+  logIrrigationEvent,
+  updateIrrigationEvent,
+  type IrrigationEvent,
+} from "../lib/api";
 import { gallonsFromForm } from "../lib/validators";
 
 vi.mock("../lib/api", () => ({
   logIrrigationEvent: vi.fn().mockResolvedValue({}),
+  updateIrrigationEvent: vi.fn().mockResolvedValue({}),
 }));
 
 const mockLog = vi.mocked(logIrrigationEvent);
+const mockUpdate = vi.mocked(updateIrrigationEvent);
+
+const runtimeEvent = {
+  id: 42,
+  farm_id: 7,
+  event_date: "2026-06-12",
+  gallons_applied: 30000,
+  hours_run: 50,
+  pump_gpm: 10,
+  source: "user_log",
+  logged_at: "2026-06-12T16:00:00Z",
+} satisfies IrrigationEvent;
 
 function renderSheet(overrides: Partial<Parameters<typeof IrrigationLogSheet>[0]> = {}) {
   const props = {
@@ -27,6 +44,7 @@ function renderSheet(overrides: Partial<Parameters<typeof IrrigationLogSheet>[0]
 describe("IrrigationLogSheet", () => {
   beforeEach(() => {
     mockLog.mockClear();
+    mockUpdate.mockClear();
   });
 
   it("renders nothing when closed", () => {
@@ -83,6 +101,35 @@ describe("IrrigationLogSheet", () => {
 
     expect(await screen.findByText("Gallons is required")).toBeInTheDocument();
     expect(mockLog).not.toHaveBeenCalled();
+  });
+
+  it("prefills the entry being edited in its original mode", () => {
+    renderSheet({ event: runtimeEvent });
+
+    expect(screen.getByText("Edit Irrigation")).toBeInTheDocument();
+    expect(screen.getByLabelText("Date")).toHaveValue("2026-06-12");
+    expect(screen.getByLabelText("Pump runtime")).toBeChecked();
+    expect(screen.getByLabelText("Hours run")).toHaveValue(50);
+    expect(screen.getByLabelText("Pump flow (GPM)")).toHaveValue(10);
+  });
+
+  it("updates instead of creating, clearing runtime on a gallons correction", async () => {
+    const user = userEvent.setup();
+    const props = renderSheet({ event: runtimeEvent });
+
+    await user.click(screen.getByLabelText("Gallons"));
+    await user.type(screen.getByLabelText("Gallons applied"), "700");
+    await user.click(screen.getByRole("button", { name: "Save Changes" }));
+
+    await waitFor(() => {
+      expect(mockUpdate).toHaveBeenCalledWith(7, 42, {
+        event_date: "2026-06-12",
+        gallons_applied: 700,
+      });
+    });
+    expect(mockLog).not.toHaveBeenCalled();
+    expect(props.onLogged).toHaveBeenCalled();
+    expect(props.onClose).toHaveBeenCalled();
   });
 
   it("shows server error and stays open on API failure", async () => {

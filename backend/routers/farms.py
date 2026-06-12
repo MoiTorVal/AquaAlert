@@ -123,6 +123,40 @@ def list_irrigation_events(
     )
 
 
+def _validate_event_ownership(db: Session, farm_id: int, event_id: int):
+    db_event = crud.get_irrigation_event(db=db, farm_id=farm_id, event_id=event_id)
+    if db_event is None:
+        raise HTTPException(status_code=404, detail="Irrigation event not found")
+    return db_event
+
+
+@router.put("/{farm_id}/irrigation-events/{event_id}", response_model=IrrigationEventResponse)
+def update_irrigation_event(
+    farm_id: int,
+    event_id: int,
+    event: IrrigationEventCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Correct a logged irrigation. Full replace of the loggable fields;
+    the row becomes USER_LOG even if it started as an SMS estimate."""
+    _validate_farm_ownership(db=db, farm_id=farm_id, user_id=current_user.id)
+    db_event = _validate_event_ownership(db=db, farm_id=farm_id, event_id=event_id)
+    return crud.update_irrigation_event(db=db, db_event=db_event, event=event)
+
+
+@router.delete("/{farm_id}/irrigation-events/{event_id}", response_model=IrrigationEventResponse)
+def delete_irrigation_event(
+    farm_id: int,
+    event_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _validate_farm_ownership(db=db, farm_id=farm_id, user_id=current_user.id)
+    db_event = _validate_event_ownership(db=db, farm_id=farm_id, event_id=event_id)
+    return crud.delete_irrigation_event(db=db, db_event=db_event)
+
+
 @router.get("/{farm_id}/alerts", response_model=PaginatedAlertResponse)
 def list_alerts(
     farm_id: int,

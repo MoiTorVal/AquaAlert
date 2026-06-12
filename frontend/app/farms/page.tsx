@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
@@ -13,6 +13,7 @@ import {
 } from "../lib/api";
 import { displayName, formatDate } from "../lib/format";
 import EditFarmSheet from "../components/EditFarmSheet";
+import KebabMenu from "../components/KebabMenu";
 import CreateFarmSheet from "../components/CreateFarmSheet";
 import ProtectedRoute from "../components/ProtectedRoute";
 
@@ -180,10 +181,16 @@ function FarmsContent() {
                   {formatDate(farm.planting_date, locale)}
                 </td>
                 <td className="px-3 py-3 text-right">
-                  <RowMenu
-                    farmName={farm.name}
-                    onEdit={() => setEditing(farm)}
-                    onDelete={() => handleDelete(farm)}
+                  <KebabMenu
+                    ariaLabel={t("actionsFor", { name: farm.name })}
+                    items={[
+                      { label: t("edit"), onSelect: () => setEditing(farm) },
+                      {
+                        label: t("delete"),
+                        onSelect: () => handleDelete(farm),
+                        danger: true,
+                      },
+                    ]}
                   />
                 </td>
               </tr>
@@ -315,72 +322,6 @@ function StatusCell({
         </span>
       )}
     </span>
-  );
-}
-
-/** Three-dot menu so Edit/Delete don't shout from every row. Clicks must not
- * bubble to the row, which navigates. */
-function RowMenu({
-  farmName,
-  onEdit,
-  onDelete,
-}: {
-  farmName: string;
-  onEdit: () => void;
-  onDelete: () => void;
-}) {
-  const t = useTranslations("farms");
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const close = (e: MouseEvent) => {
-      if (!ref.current?.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", close);
-    return () => document.removeEventListener("mousedown", close);
-  }, [open]);
-
-  return (
-    <div ref={ref} className="relative inline-block" onClick={(e) => e.stopPropagation()}>
-      <button
-        aria-label={t("actionsFor", { name: farmName })}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
-        className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
-      >
-        <span aria-hidden className="text-lg leading-none">⋯</span>
-      </button>
-      {open && (
-        <div
-          role="menu"
-          className="absolute right-0 z-10 mt-1 w-28 rounded-lg border border-gray-200 bg-white py-1 text-left shadow-lg"
-        >
-          <button
-            role="menuitem"
-            onClick={() => {
-              setOpen(false);
-              onEdit();
-            }}
-            className="block w-full px-3 py-1.5 text-left text-gray-700 hover:bg-gray-50"
-          >
-            {t("edit")}
-          </button>
-          <button
-            role="menuitem"
-            onClick={() => {
-              setOpen(false);
-              onDelete();
-            }}
-            className="block w-full px-3 py-1.5 text-left text-red-600 hover:bg-red-50"
-          >
-            {t("delete")}
-          </button>
-        </div>
-      )}
-    </div>
   );
 }
 

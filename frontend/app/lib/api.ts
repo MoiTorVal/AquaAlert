@@ -518,6 +518,35 @@ export async function logIrrigationEvent(
   });
 }
 
+/** Full replace of the loggable fields; omitting hours/gpm clears them. */
+export async function updateIrrigationEvent(
+  farmId: number,
+  eventId: number,
+  body: {
+    event_date: string;
+    gallons_applied: number;
+    hours_run?: number;
+    pump_gpm?: number;
+  },
+): Promise<IrrigationEvent> {
+  return request(
+    IrrigationEventSchema,
+    `/farms/${farmId}/irrigation-events/${eventId}`,
+    { method: "PUT", body },
+  );
+}
+
+export async function deleteIrrigationEvent(
+  farmId: number,
+  eventId: number,
+): Promise<IrrigationEvent> {
+  return request(
+    IrrigationEventSchema,
+    `/farms/${farmId}/irrigation-events/${eventId}`,
+    { method: "DELETE" },
+  );
+}
+
 /** Newest-first (backend orders by event_date desc). limit=100 is the
  * backend pagination cap — the page truncates the display itself. */
 export async function getIrrigationEvents(

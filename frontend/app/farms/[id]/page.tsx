@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
   ApiError,
+  deleteIrrigationEvent,
   getAlerts,
   getBaselineIrrigations,
   getEtSeries,
@@ -30,6 +31,7 @@ import EditFarmSheet from "../../components/EditFarmSheet";
 import FarmSetupCard from "../../components/FarmSetupCard";
 import PendingAssessmentCard from "../../components/PendingAssessmentCard";
 import AlertsCard from "../../components/AlertsCard";
+import KebabMenu from "../../components/KebabMenu";
 import ProtectedRoute from "../../components/ProtectedRoute";
 
 // Leaflet requires `window`; load client-side only (see FieldMap.tsx).
@@ -84,6 +86,8 @@ function FarmDetailContent({ params }: { params: Promise<{ id: string }> }) {
   const farmId = Number(id);
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [logOpen, setLogOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<IrrigationEvent | null>(null);
+  const [eventActionError, setEventActionError] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [showAllEvents, setShowAllEvents] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
@@ -214,6 +218,28 @@ function FarmDetailContent({ params }: { params: Promise<{ id: string }> }) {
     .filter((e) => e.event_date >= weekCutoff)
     .reduce((sum, e) => sum + e.gallons_applied, 0);
   const weekAcIn = gallonsToAcreInches(weekGallons);
+
+  const handleDeleteEvent = async (event: IrrigationEvent) => {
+    if (
+      !window.confirm(
+        t("deleteEventConfirm", {
+          gallons: event.gallons_applied.toLocaleString(),
+          date: formatDate(event.event_date, locale),
+        }),
+      )
+    ) {
+      return;
+    }
+    setEventActionError(null);
+    try {
+      await deleteIrrigationEvent(farmId, event.id);
+      reload();
+    } catch (err) {
+      setEventActionError(
+        err instanceof Error ? err.message : t("deleteEventFailed"),
+      );
+    }
+  };
   const visibleEvents = showAllEvents
     ? events
     : events.slice(0, EVENTS_PREVIEW_COUNT);
@@ -339,6 +365,11 @@ function FarmDetailContent({ params }: { params: Promise<{ id: string }> }) {
                   </span>
                 )}
               </div>
+              {eventActionError && (
+                <p role="alert" className="mt-2 text-sm text-red-600">
+                  {eventActionError}
+                </p>
+              )}
               {events.length === 0 ? (
                 <div className="mt-2 text-sm text-gray-500">
                   <p>{t("noIrrigations")}</p>
@@ -379,6 +410,22 @@ function FarmDetailContent({ params }: { params: Promise<{ id: string }> }) {
                               gallons: event.gallons_applied.toLocaleString(),
                             })}
                           </span>
+                          <KebabMenu
+                            ariaLabel={t("eventActions", {
+                              date: formatDate(event.event_date, locale),
+                            })}
+                            items={[
+                              {
+                                label: t("edit"),
+                                onSelect: () => setEditingEvent(event),
+                              },
+                              {
+                                label: t("deleteEvent"),
+                                onSelect: () => handleDeleteEvent(event),
+                                danger: true,
+                              },
+                            ]}
+                          />
                         </span>
                       </li>
                     ))}
@@ -406,6 +453,15 @@ function FarmDetailContent({ params }: { params: Promise<{ id: string }> }) {
         onClose={() => setLogOpen(false)}
         onLogged={reload}
       />
+      {editingEvent && (
+        <IrrigationLogSheet
+          farmId={farmId}
+          open
+          event={editingEvent}
+          onClose={() => setEditingEvent(null)}
+          onLogged={reload}
+        />
+      )}
       {editOpen && (
         <EditFarmSheet
           farm={farm}

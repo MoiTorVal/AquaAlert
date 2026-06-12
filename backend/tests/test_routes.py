@@ -424,6 +424,106 @@ def test_list_irrigation_events_date_filter(client, farm):
     assert body["results"][0]["event_date"] == "2026-06-05"
 
 
+def _post_event(client, farm_id, **overrides):
+    body = {"event_date": "2026-06-01", "gallons_applied": "30000.00",
+            "hours_run": "50.00", "pump_gpm": "10.00", **overrides}
+    response = client.post(f"/farms/{farm_id}/irrigation-events", json=body)
+    assert response.status_code == 201
+    return response.json()
+
+
+def test_update_irrigation_event_gallons_correction_clears_runtime(client, farm):
+    event = _post_event(client, farm.id)
+    response = client.put(
+        f"/farms/{farm.id}/irrigation-events/{event['id']}",
+        json={"event_date": "2026-06-01", "gallons_applied": "700.00"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["gallons_applied"] == "700.00"
+    # stale runtime fields from the original log must not survive
+    assert data["hours_run"] is None
+    assert data["pump_gpm"] is None
+    assert data["source"] == "user_log"
+
+
+def test_update_irrigation_event_runtime_round_trip(client, farm):
+    event = _post_event(client, farm.id, hours_run="5.00", pump_gpm="30.00",
+                        gallons_applied="9000.00")
+    response = client.put(
+        f"/farms/{farm.id}/irrigation-events/{event['id']}",
+        json={"event_date": "2026-06-02", "gallons_applied": "12000.00",
+              "hours_run": "10.00", "pump_gpm": "20.00"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["event_date"] == "2026-06-02"
+    assert data["hours_run"] == "10.00"
+    assert data["pump_gpm"] == "20.00"
+
+
+def test_update_estimated_event_becomes_user_log(client, db, farm):
+    from backend.enums import IrrigationSource
+    from backend.schemas import IrrigationEventCreate
+
+    db_event = crud.create_irrigation_event(
+        db, farm_id=farm.id,
+        event=IrrigationEventCreate(event_date=date(2026, 6, 1), gallons_applied=Decimal("5000")),
+        source=IrrigationSource.ESTIMATED,
+    )
+    response = client.put(
+        f"/farms/{farm.id}/irrigation-events/{db_event.id}",
+        json={"event_date": "2026-06-01", "gallons_applied": "4200.00"},
+    )
+    assert response.status_code == 200
+    assert response.json()["source"] == "user_log"
+
+
+def test_update_irrigation_event_unknown_event(client, farm):
+    response = client.put(
+        f"/farms/{farm.id}/irrigation-events/9999",
+        json={"event_date": "2026-06-01", "gallons_applied": "1.00"},
+    )
+    assert response.status_code == 404
+
+
+def test_update_irrigation_event_wrong_farm_404(client, farm):
+    event = _post_event(client, farm.id)
+    other = client.post("/farms/", json={"name": "Other"}).json()
+    response = client.put(
+        f"/farms/{other['id']}/irrigation-events/{event['id']}",
+        json={"event_date": "2026-06-01", "gallons_applied": "1.00"},
+    )
+    assert response.status_code == 404
+
+
+def test_update_irrigation_event_rejects_nonpositive_runtime(client, farm):
+    event = _post_event(client, farm.id)
+    response = client.put(
+        f"/farms/{farm.id}/irrigation-events/{event['id']}",
+        json={"event_date": "2026-06-01", "gallons_applied": "100.00",
+              "hours_run": "0", "pump_gpm": "10.00"},
+    )
+    assert response.status_code == 422
+
+
+def test_delete_irrigation_event(client, farm):
+    event = _post_event(client, farm.id)
+    response = client.delete(f"/farms/{farm.id}/irrigation-events/{event['id']}")
+    assert response.status_code == 200
+    assert response.json()["id"] == event["id"]
+    assert client.get(f"/farms/{farm.id}/irrigation-events").json()["total"] == 0
+    # already gone
+    response = client.delete(f"/farms/{farm.id}/irrigation-events/{event['id']}")
+    assert response.status_code == 404
+
+
+def test_delete_irrigation_event_unknown_farm(client, farm):
+    event = _post_event(client, farm.id)
+    response = client.delete(f"/farms/9999/irrigation-events/{event['id']}")
+    assert response.status_code == 404
+
+
 # ── baseline irrigation routes ───────────────────────────────────────────────
 
 
