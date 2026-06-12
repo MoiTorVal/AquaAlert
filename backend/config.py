@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     twilio_account_sid: str | None = None
     twilio_auth_token: SecretStr | None = None
     twilio_from_number: str | None = None
+    # Sentinel NDVI ingest; off by default so hosts without geo libs can boot.
+    sentinel_enabled: bool = False
     # Exact public URL Twilio posts inbound SMS to (signature is computed
     # over it, so it must match the Twilio console verbatim).
     sms_webhook_url: str | None = None

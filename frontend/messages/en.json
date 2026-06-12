@@ -75,7 +75,15 @@
     "eventActions": "Actions for irrigation on {date}",
     "deleteEvent": "Delete",
     "deleteEventConfirm": "Delete this entry — {gallons} gal on {date}? This cannot be undone.",
-    "deleteEventFailed": "Failed to delete entry"
+    "deleteEventFailed": "Failed to delete entry",
+    "ndviTitle": "NDVI field overlay",
+    "ndviAsOf": "As of {date}",
+    "ndviDemoBadge": "Demo data",
+    "ndviHelper": "Display-only layer to see where the field is stressed. Alerts still come from the AquaCrop model.",
+    "ndviTimeline": "Scan timeline",
+    "ndviLegendHigh": "> 0.60 Healthy canopy",
+    "ndviLegendMid": "0.35-0.60 Watch zone",
+    "ndviLegendLow": "< 0.35 Stressed zone"
   },
   "soil": {
     "Sandy": "Sandy",

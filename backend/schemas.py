@@ -339,6 +339,34 @@ class PaginatedAlertResponse(BaseModel):
     results: list[AlertResponse]
 
 
+class SatelliteScanSummaryResponse(BaseModel):
+    """List-endpoint row: stats only — the (large) NDVI grid ships solely via
+    the single-scan endpoint so history pages stay cheap."""
+    id: int
+    farm_id: int
+    scan_date: date
+    cloud_cover_pct: Decimal | None = None
+    mean_ndvi: Decimal | None = None
+    max_ndvi: Decimal | None = None
+    min_ndvi: Decimal | None = None
+    source: str
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SatelliteScanResponse(SatelliteScanSummaryResponse):
+    ndvi_grid: list[list[float | None]] | None = None
+    ndvi_grid_bounds: list[list[float]] | None = None
+
+
+class PaginatedSatelliteScanResponse(BaseModel):
+    total: int
+    skip: int
+    limit: int
+    results: list[SatelliteScanSummaryResponse]
+
+
 class RegionalStatsResponse(BaseModel):
     """Public aggregate — no farm-identifiable or equity data, ever."""
     snapshot_date: date

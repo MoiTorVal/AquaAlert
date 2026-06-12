@@ -8,7 +8,7 @@ from decimal import Decimal
 from geoalchemy2.elements import WKTElement
 from sqlalchemy import func, or_
 from sqlalchemy.dialects.postgresql import insert as pg_insert
-from sqlalchemy.orm import Session, Query
+from sqlalchemy.orm import Session, Query, defer
 from datetime import datetime, date, time, timedelta, timezone
 
 
@@ -381,6 +381,62 @@ def count_water_savings_by_farm(
     return _water_savings_base_query(db, farm_id, start_date, end_date).count()
 
 
+def upsert_satellite_scan(db: Session, farm_id: int, scan: dict) -> models.SatelliteScan:
+    payload = {"farm_id": farm_id, **scan}
+    stmt = pg_insert(models.SatelliteScan).values(payload)
+    stmt = stmt.on_conflict_do_update(
+        index_elements=["farm_id", "scan_date"],
+        set_={
+            "cloud_cover_pct": stmt.excluded.cloud_cover_pct,
+            "mean_ndvi": stmt.excluded.mean_ndvi,
+            "max_ndvi": stmt.excluded.max_ndvi,
+            "min_ndvi": stmt.excluded.min_ndvi,
+            "ndvi_grid": stmt.excluded.ndvi_grid,
+            "ndvi_grid_bounds": stmt.excluded.ndvi_grid_bounds,
+            "source": stmt.excluded.source,
+        },
+    ).returning(models.SatelliteScan)
+    row = db.scalars(stmt, execution_options={"populate_existing": True}).one()
+    db.commit()
+    return row
+
+
+def get_satellite_scan(
+    db: Session, farm_id: int, scan_id: int
+) -> models.SatelliteScan | None:
+    return (
+        db.query(models.SatelliteScan)
+        .filter(
+            models.SatelliteScan.id == scan_id,
+            models.SatelliteScan.farm_id == farm_id,
+        )
+        .one_or_none()
+    )
+
+
+def get_satellite_scans_by_farm(
+    db: Session, farm_id: int, skip: int = 0, limit: int = 10
+) -> list[models.SatelliteScan]:
+    # Grids are large JSONB blobs and list callers only need the stats row,
+    # so defer them; the single-scan endpoint serves the grid.
+    return (
+        db.query(models.SatelliteScan)
+        .options(
+            defer(models.SatelliteScan.ndvi_grid),
+            defer(models.SatelliteScan.ndvi_grid_bounds),
+        )
+        .filter(models.SatelliteScan.farm_id == farm_id)
+        .order_by(models.SatelliteScan.scan_date.desc(), models.SatelliteScan.id.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+
+
+def count_satellite_scans_by_farm(db: Session, farm_id: int) -> int:
+    return db.query(models.SatelliteScan).filter(models.SatelliteScan.farm_id == farm_id).count()
+
+
 def get_active_farms(db: Session, today: date) -> list[models.Farm]:
     """Farms in season: planted, and not yet past harvest (no harvest date = still active)."""
     return (
@@ -669,5 +725,3 @@ def finish_job_run(
     db.commit()
     db.refresh(job_run)
     return job_run
-
-

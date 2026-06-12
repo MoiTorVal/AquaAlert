@@ -12,12 +12,14 @@ import {
   getEtSeries,
   getFarm,
   getIrrigationEvents,
+  getSatelliteScans,
   getWaterSavings,
   getWaterStress,
   getWeatherReadings,
   type Alert,
   type Farm,
   type IrrigationEvent,
+  type SatelliteScanSummary,
   type WaterSavingsRow,
   type WaterStress,
 } from "../../lib/api";
@@ -39,6 +41,13 @@ const FieldMap = dynamic(() => import("../../components/FieldMap"), {
   ssr: false,
   loading: () => <div className="h-64 animate-pulse rounded-xl bg-gray-100" />,
 });
+const SatelliteNdviMap = dynamic(
+  () => import("../../components/SatelliteNdviMap"),
+  {
+    ssr: false,
+    loading: () => <div className="h-72 animate-pulse rounded-xl bg-gray-100" />,
+  },
+);
 
 const EVENTS_PREVIEW_COUNT = 5;
 
@@ -54,6 +63,7 @@ type LoadState =
       hasBaseline: boolean;
       events: IrrigationEvent[];
       alerts: Alert[];
+      scans: SatelliteScanSummary[];
       // Oldest event_date that still counts as "this week", fixed at fetch
       // time (render must stay pure — no Date.now() there).
       weekCutoff: string;
@@ -101,6 +111,11 @@ function FarmDetailContent({ params }: { params: Promise<{ id: string }> }) {
     let active = true;
     (async () => {
       try {
+        // Decorative NDVI layer — kicked off with the critical fetches but
+        // best-effort: a satellite failure must never fail the page.
+        const scansPromise = getSatelliteScans(farmId).catch(
+          () => [] as SatelliteScanSummary[],
+        );
         const [farm, stress, savings, baselines, events, alerts] =
           await Promise.all([
             getFarm(farmId),
@@ -110,6 +125,7 @@ function FarmDetailContent({ params }: { params: Promise<{ id: string }> }) {
             getIrrigationEvents(farmId),
             getAlerts(farmId),
           ]);
+        const scans = await scansPromise;
         const weekCutoff = new Date(Date.now() - 6 * 86_400_000)
           .toISOString()
           .slice(0, 10);
@@ -156,6 +172,7 @@ function FarmDetailContent({ params }: { params: Promise<{ id: string }> }) {
             hasBaseline: baselines.length > 0,
             events,
             alerts,
+            scans,
             weekCutoff,
             et7In,
             etAsOf,
@@ -207,6 +224,7 @@ function FarmDetailContent({ params }: { params: Promise<{ id: string }> }) {
     hasBaseline,
     events,
     alerts,
+    scans,
     weekCutoff,
     et7In,
     etAsOf,
@@ -318,6 +336,15 @@ function FarmDetailContent({ params }: { params: Promise<{ id: string }> }) {
                   >
                     {t("drawBoundary")}
                   </button>
+                </div>
+              )}
+              {farm.field_polygon && scans.length > 0 && (
+                <div className="mt-4">
+                  <SatelliteNdviMap
+                    farmId={farm.id}
+                    wkt={farm.field_polygon}
+                    scans={scans}
+                  />
                 </div>
               )}
               {et7In != null && etAsOf != null && (

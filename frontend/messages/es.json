@@ -75,7 +75,15 @@
     "eventActions": "Acciones para el riego del {date}",
     "deleteEvent": "Eliminar",
     "deleteEventConfirm": "¿Eliminar este registro — {gallons} gal del {date}? Esto no se puede deshacer.",
-    "deleteEventFailed": "No se pudo eliminar el registro"
+    "deleteEventFailed": "No se pudo eliminar el registro",
+    "ndviTitle": "Superposición NDVI de la parcela",
+    "ndviAsOf": "Al {date}",
+    "ndviDemoBadge": "Datos de demo",
+    "ndviHelper": "Capa solo visual para ver dónde la parcela está estresada. Las alertas siguen viniendo del modelo AquaCrop.",
+    "ndviTimeline": "Línea de tiempo de escaneos",
+    "ndviLegendHigh": "> 0.60 Dosel sano",
+    "ndviLegendMid": "0.35-0.60 Zona de vigilancia",
+    "ndviLegendLow": "< 0.35 Zona estresada"
   },
   "soil": {
     "Sandy": "Arenoso",

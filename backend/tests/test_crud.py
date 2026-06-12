@@ -1,8 +1,10 @@
 import pytest
 from datetime import datetime, timezone, timedelta
+from decimal import Decimal
 from backend.models import User
-from backend import crud
+from backend import crud, models
 from backend.schemas import FarmCreate, WeatherReadingCreate
+from sqlalchemy.exc import IntegrityError
 
 
 # ── farm CRUD ────────────────────────────────────────────────────────────────
@@ -260,3 +262,84 @@ def test_get_latest_et_date_source_filter(db, farm):
     assert crud.get_latest_et_date(db, farm.id) == date(2026, 6, 5)
     assert crud.get_latest_et_date(db, farm.id, source="openet:Ensemble") == date(2026, 6, 1)
     assert crud.get_latest_et_date(db, farm.id, source="cimis:eto*kc") == date(2026, 6, 5)
+
+
+def test_satellite_scan_crud_round_trip(db, farm):
+    saved = crud.upsert_satellite_scan(
+        db,
+        farm.id,
+        {
+            "scan_date": datetime(2026, 6, 9, tzinfo=timezone.utc).date(),
+            "cloud_cover_pct": 7.5,
+            "mean_ndvi": 0.612,
+            "max_ndvi": 0.784,
+            "min_ndvi": 0.402,
+            "ndvi_grid": [[0.61, 0.58], [None, 0.34]],
+            "ndvi_grid_bounds": [[36.9, -120.1], [36.91, -120.09]],
+            "source": "sentinel2",
+        },
+    )
+    assert saved.id is not None
+    assert saved.ndvi_grid == [[0.61, 0.58], [None, 0.34]]
+
+    scans = crud.get_satellite_scans_by_farm(db, farm.id, skip=0, limit=10)
+    assert len(scans) == 1
+    assert scans[0].scan_date.isoformat() == "2026-06-09"
+    assert float(scans[0].mean_ndvi) == pytest.approx(0.612)
+    assert crud.count_satellite_scans_by_farm(db, farm.id) == 1
+
+    full = crud.get_satellite_scan(db, farm.id, scans[0].id)
+    assert full.ndvi_grid == [[0.61, 0.58], [None, 0.34]]
+    assert full.ndvi_grid_bounds == [[36.9, -120.1], [36.91, -120.09]]
+    assert crud.get_satellite_scan(db, farm.id, scans[0].id + 999) is None
+
+
+def test_satellite_scan_unique_constraint(db, farm):
+    crud.upsert_satellite_scan(
+        db,
+        farm.id,
+        {
+            "scan_date": datetime(2026, 6, 10, tzinfo=timezone.utc).date(),
+            "cloud_cover_pct": 8.1,
+            "mean_ndvi": 0.501,
+            "max_ndvi": 0.702,
+            "min_ndvi": 0.203,
+            "ndvi_grid": [[0.5]],
+            "source": "seed",
+        },
+    )
+    with pytest.raises(IntegrityError):
+        db.add(
+            models.SatelliteScan(
+                farm_id=farm.id,
+                scan_date=datetime(2026, 6, 10, tzinfo=timezone.utc).date(),
+                cloud_cover_pct=Decimal("3.20"),
+                mean_ndvi=Decimal("0.700"),
+                max_ndvi=Decimal("0.800"),
+                min_ndvi=Decimal("0.600"),
+                ndvi_grid=[[0.7]],
+                source="seed",
+            )
+        )
+        db.commit()
+    db.rollback()
+
+
+def test_satellite_scan_cascades_on_farm_delete(db, user):
+    farm = crud.create_farm(db, FarmCreate(name="Cascade Farm"), user_id=user.id)
+    crud.upsert_satellite_scan(
+        db,
+        farm.id,
+        {
+            "scan_date": datetime(2026, 6, 11, tzinfo=timezone.utc).date(),
+            "cloud_cover_pct": 9.0,
+            "mean_ndvi": 0.455,
+            "max_ndvi": 0.688,
+            "min_ndvi": 0.199,
+            "ndvi_grid": [[0.45]],
+            "source": "seed",
+        },
+    )
+    assert crud.count_satellite_scans_by_farm(db, farm.id) == 1
+    crud.delete_farm(db, farm)
+    assert crud.count_satellite_scans_by_farm(db, farm.id) == 0

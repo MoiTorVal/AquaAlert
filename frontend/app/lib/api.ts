@@ -198,6 +198,38 @@ export const PaginatedAlertsSchema = z.object({
 
 export type Alert = z.infer<typeof AlertSchema>;
 
+export const SatelliteScanSummarySchema = z.object({
+  id: z.number(),
+  farm_id: z.number(),
+  scan_date: z.string(),
+  cloud_cover_pct: z.coerce.number().nullable(),
+  mean_ndvi: z.coerce.number().nullable(),
+  max_ndvi: z.coerce.number().nullable(),
+  min_ndvi: z.coerce.number().nullable(),
+  // Free-form String(50) on the backend — an enum here would turn any new
+  // source value into a client-side crash on a valid 200.
+  source: z.string(),
+  created_at: z.string(),
+});
+
+export const SatelliteScanSchema = SatelliteScanSummarySchema.extend({
+  ndvi_grid: z.array(z.array(z.number().nullable())).nullable(),
+  // [[south, west], [north, east]] of the raster window; null for seed grids.
+  ndvi_grid_bounds: z
+    .tuple([
+      z.tuple([z.number(), z.number()]),
+      z.tuple([z.number(), z.number()]),
+    ])
+    .nullable(),
+});
+
+export const PaginatedSatelliteScansSchema = z.object({
+  total: z.number(),
+  skip: z.number(),
+  limit: z.number(),
+  results: z.array(SatelliteScanSummarySchema),
+});
+
 export const BaselineIrrigationSchema = z.object({
   id: z.number(),
   farm_id: z.number(),
@@ -213,6 +245,8 @@ export const PaginatedBaselineSchema = z.object({
 });
 
 export type BaselineIrrigation = z.infer<typeof BaselineIrrigationSchema>;
+export type SatelliteScanSummary = z.infer<typeof SatelliteScanSummarySchema>;
+export type SatelliteScan = z.infer<typeof SatelliteScanSchema>;
 export type User = z.infer<typeof UserSchema>;
 export type AuthResponse = z.infer<typeof AuthResponseSchema>;
 export type MessageResponse = z.infer<typeof MessageResponseSchema>;
@@ -591,4 +625,27 @@ export async function getAlerts(farmId: number): Promise<Alert[]> {
     `/farms/${farmId}/alerts?limit=100`,
   );
   return page.results;
+}
+
+/** Newest-first NDVI scan history — stats only, grids ship per scan
+ * (limit=100 matches backend pagination cap). */
+export async function getSatelliteScans(
+  farmId: number,
+): Promise<SatelliteScanSummary[]> {
+  const page = await request(
+    PaginatedSatelliteScansSchema,
+    `/farms/${farmId}/satellite-scans?limit=100`,
+  );
+  return page.results;
+}
+
+/** Full scan incl. the NDVI grid — fetched lazily per timeline position. */
+export async function getSatelliteScan(
+  farmId: number,
+  scanId: number,
+): Promise<SatelliteScan> {
+  return request(
+    SatelliteScanSchema,
+    `/farms/${farmId}/satellite-scans/${scanId}`,
+  );
 }

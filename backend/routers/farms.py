@@ -12,6 +12,7 @@ from backend.schemas import (
     IrrigationEventCreate, IrrigationEventResponse, PaginatedIrrigationEventResponse,
     BaselineIrrigationCreate, BaselineIrrigationResponse, PaginatedBaselineIrrigationResponse,
     AlertResponse, PaginatedAlertResponse,
+    SatelliteScanResponse, SatelliteScanSummaryResponse, PaginatedSatelliteScanResponse,
     WaterSavingsResponse, PaginatedWaterSavingsResponse,
     SavingsSeriesResponse, SavingsTotals,
     ETReadingCreate, ETReadingResponse, ETSeriesResponse,
@@ -172,6 +173,41 @@ def list_alerts(
         total=total, skip=skip, limit=limit,
         results=[AlertResponse.model_validate(r) for r in results],
     )
+
+
+@router.get("/{farm_id}/satellite-scans", response_model=PaginatedSatelliteScanResponse)
+def list_satellite_scans(
+    farm_id: int,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(10, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _validate_farm_ownership(db=db, farm_id=farm_id, user_id=current_user.id)
+    results = crud.get_satellite_scans_by_farm(
+        db=db, farm_id=farm_id, skip=skip, limit=limit
+    )
+    total = crud.count_satellite_scans_by_farm(db=db, farm_id=farm_id)
+    return PaginatedSatelliteScanResponse(
+        total=total,
+        skip=skip,
+        limit=limit,
+        results=[SatelliteScanSummaryResponse.model_validate(r) for r in results],
+    )
+
+
+@router.get("/{farm_id}/satellite-scans/{scan_id}", response_model=SatelliteScanResponse)
+def read_satellite_scan(
+    farm_id: int,
+    scan_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _validate_farm_ownership(db=db, farm_id=farm_id, user_id=current_user.id)
+    scan = crud.get_satellite_scan(db=db, farm_id=farm_id, scan_id=scan_id)
+    if scan is None:
+        raise HTTPException(status_code=404, detail="Satellite scan not found")
+    return scan
 
 
 @router.get("/{farm_id}/water-stress", response_model=WaterStressResponse)
@@ -366,4 +402,3 @@ def list_water_savings(
         total=total, skip=skip, limit=limit,
         results=[WaterSavingsResponse.model_validate(r) for r in results],
     )
-

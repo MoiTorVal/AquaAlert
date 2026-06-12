@@ -2,7 +2,8 @@ from decimal import Decimal
 from datetime import datetime, date
 
 from sqlalchemy import String, Integer, Numeric, DateTime, Date, Boolean, ForeignKey, UniqueConstraint, Enum as SAEnum, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from backend.database import Base
 from geoalchemy2 import Geography
 from backend.enums import (
@@ -80,6 +81,12 @@ class Farm(Base):
     pump_hp: Mapped[Decimal | None] = mapped_column(Numeric(6, 2))
     pump_lift_ft: Mapped[Decimal | None] = mapped_column(Numeric(6, 2))
     water_source: Mapped[WaterSource | None] = mapped_column(SAEnum(WaterSource, name="watersource", values_callable=_enum_values))
+    satellite_scans: Mapped[list["SatelliteScan"]] = relationship(
+        "SatelliteScan",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        order_by="SatelliteScan.scan_date.desc()",
+    )
 
 
 class PasswordResetToken(Base):
@@ -117,6 +124,28 @@ class ETReading(Base):
 
     __table_args__ = (
         UniqueConstraint("farm_id", "reading_date", name="uq_et_farm_date"),
+    )
+
+
+class SatelliteScan(Base):
+    __tablename__ = "satellite_scans"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    farm_id: Mapped[int] = mapped_column(Integer, ForeignKey("farms.id", ondelete="CASCADE"), nullable=False, index=True)
+    scan_date: Mapped[date] = mapped_column(Date, nullable=False)
+    cloud_cover_pct: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
+    mean_ndvi: Mapped[Decimal | None] = mapped_column(Numeric(4, 3))
+    max_ndvi: Mapped[Decimal | None] = mapped_column(Numeric(4, 3))
+    min_ndvi: Mapped[Decimal | None] = mapped_column(Numeric(4, 3))
+    ndvi_grid: Mapped[list[list[float | None]] | None] = mapped_column(JSONB)
+    # Leaflet-style [[south, west], [north, east]] of the raster window in
+    # WGS84; null for seeded grids (frontend falls back to the polygon bbox).
+    ndvi_grid_bounds: Mapped[list[list[float]] | None] = mapped_column(JSONB)
+    source: Mapped[str] = mapped_column(String(50), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("farm_id", "scan_date", name="uq_satscan_farm_date"),
     )
 
 class AquaCropOutput(Base):

@@ -252,6 +252,7 @@ LIST_PATHS = [
     "/farms/{farm_id}/weather",
     "/farms/{farm_id}/irrigation-events",
     "/farms/{farm_id}/baseline-irrigations",
+    "/farms/{farm_id}/satellite-scans",
     "/farms/{farm_id}/water-savings",
 ]
 
@@ -638,3 +639,134 @@ def test_list_water_savings_unknown_farm(client):
     response = client.get("/farms/9999/water-savings")
     assert response.status_code == 404
 
+
+# ── satellite scan routes ─────────────────────────────────────────────────────
+
+
+def _add_satellite_scan(
+    db,
+    farm_id: int,
+    scan_date: date,
+    *,
+    cloud_cover_pct: Decimal | None = Decimal("8.25"),
+    mean_ndvi: Decimal | None = Decimal("0.612"),
+    max_ndvi: Decimal | None = Decimal("0.784"),
+    min_ndvi: Decimal | None = Decimal("0.402"),
+    ndvi_grid: list[list[float | None]] | None = None,
+    ndvi_grid_bounds: list[list[float]] | None = None,
+    source: str = "seed",
+):
+    row = models.SatelliteScan(
+        farm_id=farm_id,
+        scan_date=scan_date,
+        cloud_cover_pct=cloud_cover_pct,
+        mean_ndvi=mean_ndvi,
+        max_ndvi=max_ndvi,
+        min_ndvi=min_ndvi,
+        ndvi_grid=ndvi_grid if ndvi_grid is not None else [[0.61, 0.58], [None, 0.34]],
+        ndvi_grid_bounds=ndvi_grid_bounds,
+        source=source,
+    )
+    db.add(row)
+    db.commit()
+    return row
+
+
+def test_list_satellite_scans_ownership_404(client, db):
+    other = User(email="other-sat@example.com", hashed_password="dummy", name="Other")
+    db.add(other)
+    db.commit()
+    db.refresh(other)
+    other_farm = crud.create_farm(db, FarmCreate(name="Other Farm"), user_id=other.id)
+    response = client.get(f"/farms/{other_farm.id}/satellite-scans")
+    assert response.status_code == 404
+
+
+def test_list_satellite_scans_pagination(client, db, farm):
+    _add_satellite_scan(db, farm.id, date(2026, 6, 1))
+    _add_satellite_scan(db, farm.id, date(2026, 6, 6))
+    _add_satellite_scan(db, farm.id, date(2026, 6, 11))
+    response = client.get(
+        f"/farms/{farm.id}/satellite-scans",
+        params={"skip": 1, "limit": 1},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 3
+    assert body["skip"] == 1
+    assert body["limit"] == 1
+    assert len(body["results"]) == 1
+    assert body["results"][0]["scan_date"] == "2026-06-06"
+
+
+def test_list_satellite_scans_empty_list(client, farm):
+    response = client.get(f"/farms/{farm.id}/satellite-scans")
+    assert response.status_code == 200
+    assert response.json() == {"total": 0, "skip": 0, "limit": 10, "results": []}
+
+
+def test_list_satellite_scans_serializes_nullable_fields(client, db, farm):
+    row = _add_satellite_scan(
+        db,
+        farm.id,
+        date(2026, 6, 9),
+        cloud_cover_pct=None,
+        mean_ndvi=None,
+        max_ndvi=None,
+        min_ndvi=None,
+        ndvi_grid=[[None, 0.44], [0.77, None]],
+        source="sentinel2",
+    )
+    response = client.get(f"/farms/{farm.id}/satellite-scans")
+    assert response.status_code == 200
+    data = response.json()["results"][0]
+    assert data["id"] == row.id
+    assert data["scan_date"] == "2026-06-09"
+    assert data["cloud_cover_pct"] is None
+    assert data["mean_ndvi"] is None
+    assert data["max_ndvi"] is None
+    assert data["min_ndvi"] is None
+    # Grids only ship via the single-scan endpoint; list rows stay light.
+    assert "ndvi_grid" not in data
+    assert data["source"] == "sentinel2"
+    assert data["created_at"] is not None
+
+
+def test_read_satellite_scan_returns_grid_and_bounds(client, db, farm):
+    row = _add_satellite_scan(
+        db,
+        farm.id,
+        date(2026, 6, 9),
+        ndvi_grid=[[None, 0.44], [0.77, None]],
+        ndvi_grid_bounds=[[36.9, -120.1], [36.91, -120.09]],
+        source="sentinel2",
+    )
+    response = client.get(f"/farms/{farm.id}/satellite-scans/{row.id}")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["id"] == row.id
+    assert data["ndvi_grid"] == [[None, 0.44], [0.77, None]]
+    assert data["ndvi_grid_bounds"] == [[36.9, -120.1], [36.91, -120.09]]
+
+
+def test_read_satellite_scan_unknown_id_404(client, db, farm):
+    response = client.get(f"/farms/{farm.id}/satellite-scans/9999")
+    assert response.status_code == 404
+
+
+def test_read_satellite_scan_other_users_farm_404(client, db):
+    other = User(email="other-sat-read@example.com", hashed_password="dummy", name="Other")
+    db.add(other)
+    db.commit()
+    db.refresh(other)
+    other_farm = crud.create_farm(db, FarmCreate(name="Other Farm 2"), user_id=other.id)
+    row = _add_satellite_scan(db, other_farm.id, date(2026, 6, 9))
+    response = client.get(f"/farms/{other_farm.id}/satellite-scans/{row.id}")
+    assert response.status_code == 404
+
+
+def test_read_satellite_scan_wrong_farm_404(client, db, farm, user):
+    second_farm = crud.create_farm(db, FarmCreate(name="Second Farm"), user_id=user.id)
+    row = _add_satellite_scan(db, second_farm.id, date(2026, 6, 9))
+    response = client.get(f"/farms/{farm.id}/satellite-scans/{row.id}")
+    assert response.status_code == 404

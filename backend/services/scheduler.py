@@ -21,11 +21,12 @@ from backend.config import settings
 from backend.database import SessionLocal
 from backend.enums import JobStatus, StressSeverity
 from backend.schemas import ETReadingCreate, WaterSavingsBase
-from backend.services import cimis_client, openet_client, rainfall_client, savings_calculator, sms_service
+from backend.services import cimis_client, openet_client, rainfall_client, savings_calculator, sentinel_client, sms_service
 from backend.services.aquacrop_runner import AquaCropInputError, compute_and_cache_water_stress
 from backend.services.cimis_client import CimisError
 from backend.services.openet_client import ET_SOURCE, OpenETError, OpenETRateLimitError
 from backend.services.rainfall_client import RainfallError
+from backend.services.sentinel_client import SentinelError
 from backend.services.sms_service import SmsError
 
 logger = logging.getLogger(__name__)
@@ -33,6 +34,7 @@ logger = logging.getLogger(__name__)
 ET_SIM_JOB_NAME = "daily_et_sim"
 SAVINGS_JOB_NAME = "daily_water_savings"
 REGIONAL_STATS_JOB_NAME = "nightly_regional_stats"
+SATELLITE_SCANS_JOB_NAME = "sync_satellite_scans"
 STALE_ET_DAYS = 7
 
 # Provisional gap-fill rows: Spatial CIMIS reference ET scaled by a crop
@@ -408,6 +410,75 @@ def run_regional_stats_job(db: Session | None = None, today: date | None = None)
             db.close()
 
 
+def run_satellite_scans_job(db: Session | None = None, today: date | None = None) -> models.JobRun:
+    """Every 3 days: refresh the latest clipped Sentinel-2 NDVI scan per farm."""
+    owns_session = db is None
+    if owns_session:
+        db = SessionLocal()
+    if today is None:
+        today = date.today()
+    job_run = crud.create_job_run(db, SATELLITE_SCANS_JOB_NAME)
+    processed = failed = skipped = 0
+    notes: list[str] = []
+    try:
+        if not settings.sentinel_enabled:
+            crud.finish_job_run(
+                db,
+                job_run,
+                JobStatus.SUCCESS,
+                processed=0,
+                failed=0,
+                skipped=0,
+                detail="sentinel disabled",
+            )
+            return job_run
+
+        # In-season farms only — same scope as the ET job; harvested farms
+        # would otherwise burn STAC searches and COG reads forever.
+        for farm in crud.get_active_farms(db, today):
+            if farm.field_polygon is None:
+                skipped += 1
+                notes.append(f"farm {farm.id}: missing polygon")
+                continue
+            try:
+                scan = sentinel_client.fetch_latest_ndvi(to_shape(farm.field_polygon))
+                scan["source"] = "sentinel2"
+                crud.upsert_satellite_scan(db, farm.id, scan)
+                processed += 1
+            except SentinelError as exc:
+                failed += 1
+                notes.append(f"farm {farm.id}: sentinel fetch failed: {exc}")
+                logger.warning("Sentinel fetch failed for farm %d: %s", farm.id, exc)
+                continue
+
+        status = JobStatus.SUCCESS if failed == 0 else JobStatus.FAILED
+        crud.finish_job_run(
+            db,
+            job_run,
+            status,
+            processed=processed,
+            failed=failed,
+            skipped=skipped,
+            detail="; ".join(notes)[:2000] or None,
+        )
+        return job_run
+    except Exception as exc:
+        logger.exception("%s crashed", SATELLITE_SCANS_JOB_NAME)
+        crud.finish_job_run(
+            db,
+            job_run,
+            JobStatus.FAILED,
+            processed=processed,
+            failed=failed,
+            skipped=skipped,
+            detail=f"unhandled: {exc}"[:2000],
+        )
+        raise
+    finally:
+        if owns_session:
+            db.close()
+
+
 def start_scheduler() -> AsyncIOScheduler:
     """Start the daily jobs. ET+sim at 02:00, savings at 03:00 (after ET lands)."""
     global _scheduler
@@ -417,10 +488,20 @@ def start_scheduler() -> AsyncIOScheduler:
     _scheduler.add_job(run_et_sim_job, CronTrigger(hour=2, minute=0), id=ET_SIM_JOB_NAME)
     # sync jobs: APScheduler runs them in worker threads, off the event loop
     _scheduler.add_job(run_savings_job, CronTrigger(hour=3, minute=0), id=SAVINGS_JOB_NAME)
+    _scheduler.add_job(
+        run_satellite_scans_job,
+        CronTrigger(day="*/3", hour=3, minute=30),
+        id=SATELLITE_SCANS_JOB_NAME,
+    )
     # after the savings job so public totals include today's rows
     _scheduler.add_job(run_regional_stats_job, CronTrigger(hour=4, minute=0), id=REGIONAL_STATS_JOB_NAME)
     _scheduler.start()
-    logger.info("Scheduler started (%s, %s)", ET_SIM_JOB_NAME, SAVINGS_JOB_NAME)
+    logger.info(
+        "Scheduler started (%s, %s, %s)",
+        ET_SIM_JOB_NAME,
+        SAVINGS_JOB_NAME,
+        SATELLITE_SCANS_JOB_NAME,
+    )
     return _scheduler
 
 

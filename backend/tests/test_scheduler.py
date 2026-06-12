@@ -9,20 +9,23 @@ from backend import crud, models
 from backend.config import settings
 from backend.enums import JobStatus, Locale, SoilTexture, StressSeverity
 from backend.schemas import AquaCropOutputBase, BaselineIrrigationCreate, ETReadingCreate, FarmCreate, IrrigationEventCreate
-from backend.services import cimis_client, openet_client, rainfall_client, savings_calculator, sms_service
+from backend.services import cimis_client, openet_client, rainfall_client, savings_calculator, sentinel_client, sms_service
 from backend.services.aquacrop_runner import CROP_TYPE_TO_AQUACROP
 from backend.services.cimis_client import CimisUnavailableError
 from backend.services.openet_client import ET_SOURCE, OpenETRateLimitError, OpenETUnavailableError
 from backend.services.rainfall_client import RainfallUnavailableError
+from backend.services.sentinel_client import SentinelUnavailableError
 from backend.services.sms_service import SmsError
 from backend.services.scheduler import (
     ET_SIM_JOB_NAME,
     KC_MID,
     PROVISIONAL_ET_SOURCE,
     RAIN_REFRESH_DAYS,
+    SATELLITE_SCANS_JOB_NAME,
     SAVINGS_JOB_NAME,
     is_et_stale,
     run_et_sim_job,
+    run_satellite_scans_job,
     run_savings_job,
 )
 
@@ -44,6 +47,26 @@ def no_rain(monkeypatch):
         return []
 
     monkeypatch.setattr(rainfall_client, "fetch_daily_precip", fake_fetch)
+    return calls
+
+
+@pytest.fixture(autouse=True)
+def fake_satellite(monkeypatch):
+    calls = []
+
+    def fake_fetch(polygon, max_cloud_pct=15, lookback_days=14):
+        calls.append((max_cloud_pct, lookback_days))
+        return {
+            "scan_date": TODAY,
+            "cloud_cover_pct": 4.2,
+            "mean_ndvi": 0.61,
+            "max_ndvi": 0.78,
+            "min_ndvi": 0.41,
+            "ndvi_grid": [[0.5, 0.6], [None, 0.7]],
+            "ndvi_grid_bounds": [[36.9, -120.1], [36.91, -120.09]],
+        }
+
+    monkeypatch.setattr(sentinel_client, "fetch_latest_ndvi", fake_fetch)
     return calls
 
 
@@ -727,8 +750,111 @@ def test_jobs_open_and_close_their_own_session(db, sim_farm, fake_et, monkeypatc
     monkeypatch.setattr(scheduler_module, "SessionLocal", lambda: db)
     et_run = asyncio.run(run_et_sim_job())
     savings_run = run_savings_job()
+    satellite_run = run_satellite_scans_job()
     assert et_run.id is not None
     assert savings_run.id is not None
+    assert satellite_run.id is not None
+
+
+# ── Sentinel satellite scan job ───────────────────────────────────────────────
+
+
+def test_satellite_job_upserts_and_dedupes(db, sim_farm, monkeypatch):
+    monkeypatch.setattr(settings, "sentinel_enabled", True)
+    run_satellite_scans_job(db=db, today=TODAY)
+    run_satellite_scans_job(db=db, today=TODAY)
+
+    rows = crud.get_satellite_scans_by_farm(db, sim_farm.id, limit=100)
+    assert len(rows) == 1
+    assert rows[0].scan_date == TODAY
+    assert float(rows[0].mean_ndvi) == pytest.approx(0.61)
+    assert rows[0].source == "sentinel2"
+    full = crud.get_satellite_scan(db, sim_farm.id, rows[0].id)
+    assert full.ndvi_grid_bounds == [[36.9, -120.1], [36.91, -120.09]]
+
+
+def test_satellite_job_per_farm_failure_does_not_block_others(db, user, monkeypatch):
+    farm_ok = crud.create_farm(
+        db,
+        FarmCreate(
+            name="OK",
+            crop_type="corn",
+            soil_type=SoilTexture.SandyLoam,
+            planting_date=START,
+            field_polygon=FIELD_WKT,
+        ),
+        user_id=user.id,
+    )
+    farm_fail = crud.create_farm(
+        db,
+        FarmCreate(
+            name="Fail",
+            crop_type="corn",
+            soil_type=SoilTexture.SandyLoam,
+            planting_date=START,
+            field_polygon=FIELD_WKT,
+        ),
+        user_id=user.id,
+    )
+    monkeypatch.setattr(settings, "sentinel_enabled", True)
+
+    def flaky_fetch(polygon, max_cloud_pct=15, lookback_days=14):
+        if flaky_fetch.calls == 0:
+            flaky_fetch.calls += 1
+            return {
+                "scan_date": TODAY,
+                "cloud_cover_pct": 4.2,
+                "mean_ndvi": 0.61,
+                "max_ndvi": 0.78,
+                "min_ndvi": 0.41,
+                "ndvi_grid": [[0.5]],
+                "ndvi_grid_bounds": [[36.9, -120.1], [36.91, -120.09]],
+            }
+        raise SentinelUnavailableError("no scene")
+
+    flaky_fetch.calls = 0
+    monkeypatch.setattr(sentinel_client, "fetch_latest_ndvi", flaky_fetch)
+    job_run = run_satellite_scans_job(db=db, today=TODAY)
+    assert job_run.status == JobStatus.FAILED
+    assert job_run.farms_processed == 1
+    assert job_run.farms_failed == 1
+    assert "sentinel fetch failed" in (job_run.detail or "")
+    assert crud.count_satellite_scans_by_farm(db, farm_ok.id) + crud.count_satellite_scans_by_farm(db, farm_fail.id) == 1
+
+
+def test_satellite_job_disabled_is_noop(db, sim_farm, monkeypatch):
+    monkeypatch.setattr(settings, "sentinel_enabled", False)
+    job_run = run_satellite_scans_job(db=db, today=TODAY)
+    assert job_run.status == JobStatus.SUCCESS
+    assert job_run.farms_processed == 0
+    assert crud.count_satellite_scans_by_farm(db, sim_farm.id) == 0
+
+
+def test_satellite_job_scans_active_farms_only(db, user, fake_satellite, monkeypatch):
+    monkeypatch.setattr(settings, "sentinel_enabled", True)
+    no_polygon = crud.create_farm(
+        db,
+        FarmCreate(
+            name="No Polygon",
+            crop_type="corn",
+            soil_type=SoilTexture.SandyLoam,
+            planting_date=START,
+        ),
+        user_id=user.id,
+    )
+    unplanted = crud.create_farm(
+        db,
+        FarmCreate(name="Unplanted", field_polygon=FIELD_WKT),
+        user_id=user.id,
+    )
+    job_run = run_satellite_scans_job(db=db, today=TODAY)
+    assert job_run.status == JobStatus.SUCCESS
+    assert job_run.farms_processed == 0
+    assert job_run.farms_skipped == 1  # active but missing polygon
+    assert "missing polygon" in (job_run.detail or "")
+    assert len(fake_satellite) == 0  # unplanted farm never fetched
+    assert crud.count_satellite_scans_by_farm(db, no_polygon.id) == 0
+    assert crud.count_satellite_scans_by_farm(db, unplanted.id) == 0
 
 
 # ── scheduler lifecycle ──────────────────────────────────────────────────────
@@ -744,6 +870,7 @@ def test_start_and_shutdown_scheduler():
             assert {job.id for job in s.get_jobs()} == {
                 ET_SIM_JOB_NAME,
                 SAVINGS_JOB_NAME,
+                SATELLITE_SCANS_JOB_NAME,
                 scheduler_module.REGIONAL_STATS_JOB_NAME,
             }
             assert scheduler_module.start_scheduler() is s  # idempotent
