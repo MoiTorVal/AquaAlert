@@ -8,7 +8,13 @@ import { parseWktPolygon } from "../lib/wkt";
 
 // Leaflet touches `window` at import time, so this component must only be
 // loaded with next/dynamic({ ssr: false }).
-export default function FieldMap({ wkt }: { wkt: string }) {
+export default function FieldMap({
+  wkt,
+  label,
+}: {
+  wkt: string;
+  label?: string;
+}) {
   const positions = parseWktPolygon(wkt);
   if (!positions) return null;
 
@@ -28,6 +34,13 @@ export default function FieldMap({ wkt }: { wkt: string }) {
           pathOptions={{ color: "#16a34a", weight: 3, fillOpacity: 0.15 }}
         />
       </MapContainer>
+      {label && (
+        // z-[1000] sits above Leaflet's panes (max ~700) but stays inside
+        // this stacking context thanks to `isolate` above
+        <span className="pointer-events-none absolute right-2 top-2 z-[1000] rounded-md bg-black/60 px-2 py-1 text-xs font-medium text-white">
+          {label}
+        </span>
+      )}
     </div>
   );
 }

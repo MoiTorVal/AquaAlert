@@ -26,7 +26,7 @@ describe("TrafficLightCard", () => {
     expect(
       screen.getByText(/No stress expected for roughly 41 days/),
     ).toBeInTheDocument();
-    expect(screen.getByText(/As of 2026-06-05/)).toBeInTheDocument();
+    expect(screen.getByText(/As of Jun 5, 2026/)).toBeInTheDocument();
   });
 
   it("shows yellow warning with countdown", () => {

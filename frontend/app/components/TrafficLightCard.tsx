@@ -1,7 +1,8 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import type { StressSeverity, WaterStress } from "../lib/api";
+import { formatDate } from "../lib/format";
 
 const SEVERITY_STYLES: Record<StressSeverity, { dot: string; bg: string }> = {
   green: { dot: "bg-green-500", bg: "bg-green-50 border-green-200" },
@@ -17,6 +18,7 @@ const SEVERITY_LABEL_KEY = {
 
 export default function TrafficLightCard({ stress }: { stress: WaterStress }) {
   const t = useTranslations("trafficLight");
+  const locale = useLocale();
   const style = stress.severity ? SEVERITY_STYLES[stress.severity] : null;
   const days = stress.days_to_stress;
 
@@ -55,7 +57,7 @@ export default function TrafficLightCard({ stress }: { stress: WaterStress }) {
       </div>
       <p className="mt-2 text-gray-700">{message}</p>
       <p className="mt-3 text-xs text-gray-500">
-        {t("asOf", { date: stress.as_of_date })}
+        {t("asOf", { date: formatDate(stress.as_of_date, locale) })}
         {stress.et_is_stale && (
           <span
             role="status"

@@ -1,28 +1,33 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
   ApiError,
+  getAlerts,
   getBaselineIrrigations,
   getFarm,
   getIrrigationEvents,
   getWaterSavings,
   getWaterStress,
+  type Alert,
   type Farm,
   type IrrigationEvent,
   type WaterSavingsRow,
   type WaterStress,
 } from "../../lib/api";
 import { soilLabel } from "../../lib/validators";
+import { displayName, formatDate } from "../../lib/format";
 import TrafficLightCard from "../../components/TrafficLightCard";
 import StressDetails from "../../components/StressDetails";
 import SavingsCard from "../../components/SavingsCard";
 import IrrigationLogSheet from "../../components/IrrigationLogSheet";
 import EditFarmSheet from "../../components/EditFarmSheet";
 import FarmSetupCard from "../../components/FarmSetupCard";
+import PendingAssessmentCard from "../../components/PendingAssessmentCard";
+import AlertsCard from "../../components/AlertsCard";
 import ProtectedRoute from "../../components/ProtectedRoute";
 
 // Leaflet requires `window`; load client-side only (see FieldMap.tsx).
@@ -30,6 +35,8 @@ const FieldMap = dynamic(() => import("../../components/FieldMap"), {
   ssr: false,
   loading: () => <div className="h-64 animate-pulse rounded-xl bg-gray-100" />,
 });
+
+const EVENTS_PREVIEW_COUNT = 5;
 
 type LoadState =
   | { status: "loading" }
@@ -42,6 +49,10 @@ type LoadState =
       savings: WaterSavingsRow[];
       hasBaseline: boolean;
       events: IrrigationEvent[];
+      alerts: Alert[];
+      // Oldest event_date that still counts as "this week", fixed at fetch
+      // time (render must stay pure — no Date.now() there).
+      weekCutoff: string;
     };
 
 export default function FarmDetailPage({
@@ -58,11 +69,13 @@ export default function FarmDetailPage({
 
 function FarmDetailContent({ params }: { params: Promise<{ id: string }> }) {
   const t = useTranslations("farmDetail");
+  const locale = useLocale();
   const { id } = use(params);
   const farmId = Number(id);
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [logOpen, setLogOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [showAllEvents, setShowAllEvents] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
   const reload = () => {
@@ -74,13 +87,15 @@ function FarmDetailContent({ params }: { params: Promise<{ id: string }> }) {
     let active = true;
     (async () => {
       try {
-        const [farm, stress, savings, baselines, events] = await Promise.all([
-          getFarm(farmId),
-          getWaterStress(farmId),
-          getWaterSavings(farmId),
-          getBaselineIrrigations(farmId),
-          getIrrigationEvents(farmId),
-        ]);
+        const [farm, stress, savings, baselines, events, alerts] =
+          await Promise.all([
+            getFarm(farmId),
+            getWaterStress(farmId),
+            getWaterSavings(farmId),
+            getBaselineIrrigations(farmId),
+            getIrrigationEvents(farmId),
+            getAlerts(farmId),
+          ]);
         if (active)
           setState({
             status: "ready",
@@ -89,6 +104,10 @@ function FarmDetailContent({ params }: { params: Promise<{ id: string }> }) {
             savings,
             hasBaseline: baselines.length > 0,
             events,
+            alerts,
+            weekCutoff: new Date(Date.now() - 6 * 86_400_000)
+              .toISOString()
+              .slice(0, 10),
           });
       } catch (err) {
         if (!active) return;
@@ -122,23 +141,32 @@ function FarmDetailContent({ params }: { params: Promise<{ id: string }> }) {
         <p className="text-sm text-red-500">{state.message}</p>
         <button
           onClick={reload}
-          className="mt-4 rounded-lg border px-4 py-2 text-sm hover:bg-gray-50"
+          className="mt-4 rounded-lg border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50"
         >
           {t("tryAgain")}
         </button>
       </CenteredMessage>
     );
 
-  const { farm, stress, savings, hasBaseline, events } = state;
+  const { farm, stress, savings, hasBaseline, events, alerts, weekCutoff } =
+    state;
+
+  // Gallons applied over the trailing 7 days, for the irrigation subtotal.
+  const weekGallons = events
+    .filter((e) => e.event_date >= weekCutoff)
+    .reduce((sum, e) => sum + e.gallons_applied, 0);
+  const visibleEvents = showAllEvents
+    ? events
+    : events.slice(0, EVENTS_PREVIEW_COUNT);
 
   return (
     // pt-28 clears the fixed navbar (matches /impact)
-    <main className="mx-auto max-w-3xl p-6 pt-28">
+    <main className="mx-auto max-w-6xl p-6 pt-28">
       <Link href="/farms" className="text-sm text-gray-500 hover:underline">
         {t("back")}
       </Link>
       <div className="mt-2 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">{farm.name}</h1>
+        <h1 className="text-2xl font-bold">{displayName(farm.name)}</h1>
         <div className="flex gap-2">
           <button
             onClick={() => setEditOpen(true)}
@@ -157,84 +185,141 @@ function FarmDetailContent({ params }: { params: Promise<{ id: string }> }) {
 
       <div className="mt-6 flex flex-col gap-4">
         <FarmSetupCard farm={farm} hasBaseline={hasBaseline} onChanged={reload} />
-        {stress ? (
-          <>
-            <TrafficLightCard stress={stress} />
-            <StressDetails stress={stress} farm={farm} />
-          </>
-        ) : (
-          <section className="rounded-2xl border border-gray-200 bg-gray-50 p-6">
-            <h2 className="text-lg font-semibold">{t("noAssessmentTitle")}</h2>
-            <p className="mt-2 text-sm text-gray-600">{t("noAssessmentBody")}</p>
-          </section>
-        )}
 
-        <section className="rounded-2xl border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold">{t("field")}</h2>
-          {farm.field_polygon && (
-            <div className="mt-4">
-              <FieldMap wkt={farm.field_polygon} />
-            </div>
-          )}
-          <dl className="mt-2 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
-            <div>
-              <dt className="text-gray-500">{t("crop")}</dt>
-              <dd className="font-medium">{farm.crop_type ?? "—"}</dd>
-            </div>
-            <div>
-              <dt className="text-gray-500">{t("planted")}</dt>
-              <dd className="font-medium">{farm.planting_date ?? "—"}</dd>
-            </div>
-            <div>
-              <dt className="text-gray-500">{t("soil")}</dt>
-              <dd className="font-medium">
-                {farm.soil_type ? soilLabel(farm.soil_type) : "—"}
-              </dd>
-            </div>
-          </dl>
-        </section>
+        <div className="grid gap-4 lg:grid-cols-5 lg:items-start">
+          <div className="flex flex-col gap-4 lg:col-span-3">
+            {stress ? (
+              <>
+                <TrafficLightCard stress={stress} />
+                <StressDetails stress={stress} farm={farm} />
+              </>
+            ) : (
+              <PendingAssessmentCard
+                farm={farm}
+                onAddDetails={() => setEditOpen(true)}
+              />
+            )}
 
-        <section className="rounded-2xl border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold">{t("irrigationHistory")}</h2>
-          {events.length === 0 ? (
-            <p className="mt-2 text-sm text-gray-500">{t("noIrrigations")}</p>
-          ) : (
-            <ul className="mt-3 divide-y divide-gray-100 text-sm">
-              {events.map((event) => (
-                <li
-                  key={event.id}
-                  className="flex items-center justify-between py-2"
-                >
-                  <span className="text-gray-600">{event.event_date}</span>
-                  <span className="flex items-center gap-2">
-                    {event.source === "estimated" && (
-                      <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
-                        {t("estimated")}
-                      </span>
-                    )}
-                    {event.hours_run != null && event.pump_gpm != null && (
-                      <span className="text-xs text-gray-500">
-                        {t("runtimeValue", {
-                          hours: event.hours_run.toLocaleString(),
-                          gpm: event.pump_gpm.toLocaleString(),
-                        })}
-                      </span>
-                    )}
-                    <span className="font-medium">
-                      {t("gallonsValue", {
-                        gallons: event.gallons_applied.toLocaleString(),
-                      })}
-                    </span>
+            <AlertsCard alerts={alerts} />
+
+            <Link href={`/farms/${farmId}/savings`} className="block">
+              <SavingsCard rows={savings} />
+            </Link>
+          </div>
+
+          <div className="flex flex-col gap-4 lg:col-span-2">
+            <section className="rounded-2xl border border-gray-200 p-6">
+              <h2 className="text-lg font-semibold">{t("field")}</h2>
+              {farm.field_polygon ? (
+                <div className="mt-4">
+                  <FieldMap
+                    wkt={farm.field_polygon}
+                    label={
+                      farm.acreage_acres != null
+                        ? t("acresChip", {
+                            acres: farm.acreage_acres.toLocaleString(),
+                          })
+                        : undefined
+                    }
+                  />
+                </div>
+              ) : (
+                <div className="mt-4 rounded-xl bg-gray-50 p-4 text-sm text-gray-600">
+                  <p>{t("noBoundary")}</p>
+                  <button
+                    onClick={() => setEditOpen(true)}
+                    className="mt-3 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+                  >
+                    {t("drawBoundary")}
+                  </button>
+                </div>
+              )}
+              <dl className="mt-4 grid grid-cols-3 gap-2">
+                <FieldFact
+                  label={t("crop")}
+                  value={farm.crop_type ? displayName(farm.crop_type) : "—"}
+                />
+                <FieldFact
+                  label={t("planted")}
+                  value={formatDate(farm.planting_date, locale)}
+                />
+                <FieldFact
+                  label={t("soil")}
+                  value={farm.soil_type ? soilLabel(farm.soil_type) : "—"}
+                />
+              </dl>
+            </section>
+
+            <section className="rounded-2xl border border-gray-200 p-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold">
+                  {t("irrigationHistory")}
+                </h2>
+                {weekGallons > 0 && (
+                  <span className="rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700">
+                    {t("thisWeek", { gallons: weekGallons.toLocaleString() })}
                   </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
-        <Link href={`/farms/${farmId}/savings`} className="block">
-          <SavingsCard rows={savings} />
-        </Link>
+                )}
+              </div>
+              {events.length === 0 ? (
+                <div className="mt-2 text-sm text-gray-500">
+                  <p>{t("noIrrigations")}</p>
+                  <button
+                    onClick={() => setLogOpen(true)}
+                    className="mt-3 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    {t("logIrrigation")}
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <ul className="mt-3 divide-y divide-gray-100 text-sm">
+                    {visibleEvents.map((event) => (
+                      <li
+                        key={event.id}
+                        className="flex items-center justify-between py-2"
+                      >
+                        <span className="text-gray-600">
+                          {formatDate(event.event_date, locale)}
+                        </span>
+                        <span className="flex items-center gap-2">
+                          {event.source === "estimated" && (
+                            <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
+                              {t("estimated")}
+                            </span>
+                          )}
+                          {event.hours_run != null && event.pump_gpm != null && (
+                            <span className="text-xs text-gray-500">
+                              {t("runtimeValue", {
+                                hours: event.hours_run.toLocaleString(),
+                                gpm: event.pump_gpm.toLocaleString(),
+                              })}
+                            </span>
+                          )}
+                          <span className="font-medium">
+                            {t("gallonsValue", {
+                              gallons: event.gallons_applied.toLocaleString(),
+                            })}
+                          </span>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  {events.length > EVENTS_PREVIEW_COUNT && (
+                    <button
+                      onClick={() => setShowAllEvents((v) => !v)}
+                      className="mt-3 text-sm font-medium text-green-700 hover:underline"
+                    >
+                      {showAllEvents
+                        ? t("showLess")
+                        : t("viewAll", { count: events.length })}
+                    </button>
+                  )}
+                </>
+              )}
+            </section>
+          </div>
+        </div>
       </div>
 
       <IrrigationLogSheet
@@ -254,14 +339,28 @@ function FarmDetailContent({ params }: { params: Promise<{ id: string }> }) {
   );
 }
 
+function FieldFact({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg bg-gray-50 p-3">
+      <dt className="text-xs text-gray-500">{label}</dt>
+      <dd className="mt-0.5 text-sm font-semibold text-gray-900">{value}</dd>
+    </div>
+  );
+}
+
 function DetailSkeleton() {
   return (
-    <main className="mx-auto max-w-3xl p-6 pt-28">
+    <main className="mx-auto max-w-6xl p-6 pt-28">
       <div className="h-8 w-48 animate-pulse rounded bg-gray-200" />
-      <div className="mt-6 flex flex-col gap-4">
-        {[...Array(3)].map((_, i) => (
-          <div key={i} className="h-32 animate-pulse rounded-2xl bg-gray-100" />
-        ))}
+      <div className="mt-6 grid gap-4 lg:grid-cols-5">
+        <div className="flex flex-col gap-4 lg:col-span-3">
+          {[...Array(2)].map((_, i) => (
+            <div key={i} className="h-40 animate-pulse rounded-2xl bg-gray-100" />
+          ))}
+        </div>
+        <div className="lg:col-span-2">
+          <div className="h-80 animate-pulse rounded-2xl bg-gray-100" />
+        </div>
       </div>
     </main>
   );

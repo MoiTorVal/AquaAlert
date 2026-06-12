@@ -2,6 +2,7 @@
 
 import { useLocale, useTranslations } from "next-intl";
 import type { WaterSavingsRow } from "../lib/api";
+import { formatDate } from "../lib/format";
 
 export default function SavingsCard({ rows }: { rows: WaterSavingsRow[] }) {
   const t = useTranslations("savings");
@@ -38,7 +39,9 @@ export default function SavingsCard({ rows }: { rows: WaterSavingsRow[] }) {
       <p className="mt-1 text-sm text-gray-600">
         {t("energyLine", { kwh: nf1.format(kwh), co2: nf1.format(co2) })}
       </p>
-      <p className="mt-3 text-xs text-gray-500">{t("asOf", { date: asOf })}</p>
+      <p className="mt-3 text-xs text-gray-500">
+        {t("asOf", { date: formatDate(asOf, locale) })}
+      </p>
     </section>
   );
 }

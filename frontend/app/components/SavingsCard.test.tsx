@@ -37,7 +37,7 @@ describe("SavingsCard", () => {
     );
     expect(screen.getByText("5,000 gal saved")).toBeInTheDocument();
     expect(screen.getByText(/2\.8 kWh .* 0\.7 kg CO₂/)).toBeInTheDocument();
-    expect(screen.getByText("As of 2026-06-14")).toBeInTheDocument();
+    expect(screen.getByText("As of Jun 14, 2026")).toBeInTheDocument();
   });
 
   it("shows empty state without rows", () => {

@@ -1,7 +1,8 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import type { Farm, WaterStress } from "../lib/api";
+import { formatDate } from "../lib/format";
 import GlossaryTooltip, { type GlossaryTerm } from "./GlossaryTooltip";
 
 function Row({
@@ -35,6 +36,7 @@ export default function StressDetails({
   farm: Farm;
 }) {
   const t = useTranslations("stressDetails");
+  const locale = useLocale();
   return (
     <details className="rounded-2xl border border-gray-200 p-4">
       <summary className="cursor-pointer text-sm font-medium text-gray-700">
@@ -73,7 +75,7 @@ export default function StressDetails({
         <Row
           label={t("satelliteThrough")}
           term="ET"
-          value={stress.et_latest_date ?? "—"}
+          value={formatDate(stress.et_latest_date, locale)}
         />
       </dl>
     </details>

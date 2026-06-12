@@ -11,7 +11,7 @@
     "logout": "Log Out"
   },
   "farmDetail": {
-    "back": "← My farms",
+    "back": "← My Farms",
     "logIrrigation": "+ Log Irrigation",
     "edit": "Edit",
     "field": "Field",
@@ -27,8 +27,41 @@
     "backToFarms": "Back to my farms",
     "errorTitle": "Something went wrong",
     "tryAgain": "Try again",
-    "noAssessmentTitle": "No assessment yet",
-    "noAssessmentBody": "Water-stress readings appear after the first satellite data arrives — usually within a day of adding your field boundary, crop, and planting date."
+    "acresChip": "{acres} acres",
+    "noBoundary": "No field boundary yet — draw one so satellites know where to look.",
+    "drawBoundary": "Draw boundary",
+    "thisWeek": "{gallons} gal this week",
+    "viewAll": "View all ({count})",
+    "showLess": "Show less"
+  },
+  "pendingAssessment": {
+    "setupTitle": "Finish setup to start assessments",
+    "waitingTitle": "Waiting on first satellite reading",
+    "setupBody": "Water-stress readings start once your field is fully set up.",
+    "waitingBody": "Everything is set — the first reading usually arrives within a day, once tonight's satellite data comes in.",
+    "boundary": "Field boundary",
+    "crop": "Crop type",
+    "plantingDate": "Planting date",
+    "soil": "Soil type",
+    "satellitePending": "First satellite reading — expected within a day",
+    "satelliteBlocked": "Satellite readings — start after setup is complete",
+    "addDetails": "Add missing details"
+  },
+  "alerts": {
+    "title": "Alerts",
+    "smsLabel": "Text me when a field approaches stress",
+    "smsOnTo": "SMS alerts on — sending to {phone}",
+    "smsOff": "SMS alerts are off",
+    "phoneLabel": "Mobile number",
+    "enableSms": "Enable SMS alerts",
+    "saveFailed": "Could not save your settings",
+    "history": "History",
+    "empty": "No alerts yet. When this field approaches stress, it shows up here.",
+    "redAlert": "Water stress",
+    "yellowAlert": "Approaching stress",
+    "yellowAlertDays": "Approaching stress — {days, plural, one {# day} other {# days}} left",
+    "feedbackYes": "Confirmed in field",
+    "feedbackNo": "Looked fine"
   },
   "trafficLight": {
     "healthy": "Healthy",

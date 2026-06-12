@@ -27,8 +27,41 @@
     "backToFarms": "Volver a mis ranchos",
     "errorTitle": "Algo salió mal",
     "tryAgain": "Intentar de nuevo",
-    "noAssessmentTitle": "Aún no hay evaluación",
-    "noAssessmentBody": "Las lecturas de estrés hídrico aparecen cuando llegan los primeros datos satelitales — normalmente dentro de un día después de agregar el límite de su parcela, cultivo y fecha de siembra."
+    "acresChip": "{acres} acres",
+    "noBoundary": "Aún no hay límite de parcela — dibuje uno para que los satélites sepan dónde mirar.",
+    "drawBoundary": "Dibujar límite",
+    "thisWeek": "{gallons} gal esta semana",
+    "viewAll": "Ver todos ({count})",
+    "showLess": "Ver menos"
+  },
+  "pendingAssessment": {
+    "setupTitle": "Complete la configuración para iniciar las evaluaciones",
+    "waitingTitle": "Esperando la primera lectura satelital",
+    "setupBody": "Las lecturas de estrés hídrico comienzan cuando su parcela está completamente configurada.",
+    "waitingBody": "Todo listo — la primera lectura normalmente llega dentro de un día, cuando entren los datos satelitales de esta noche.",
+    "boundary": "Límite de parcela",
+    "crop": "Tipo de cultivo",
+    "plantingDate": "Fecha de siembra",
+    "soil": "Tipo de suelo",
+    "satellitePending": "Primera lectura satelital — se espera dentro de un día",
+    "satelliteBlocked": "Lecturas satelitales — comienzan al completar la configuración",
+    "addDetails": "Agregar datos faltantes"
+  },
+  "alerts": {
+    "title": "Alertas",
+    "smsLabel": "Enviarme un texto cuando una parcela se acerque al estrés",
+    "smsOnTo": "Alertas SMS activadas — se envían a {phone}",
+    "smsOff": "Las alertas SMS están desactivadas",
+    "phoneLabel": "Número de celular",
+    "enableSms": "Activar alertas SMS",
+    "saveFailed": "No se pudo guardar su configuración",
+    "history": "Historial",
+    "empty": "Aún no hay alertas. Cuando esta parcela se acerque al estrés, aparecerá aquí.",
+    "redAlert": "Estrés hídrico",
+    "yellowAlert": "Acercándose al estrés",
+    "yellowAlertDays": "Acercándose al estrés — {days, plural, one {queda # día} other {quedan # días}}",
+    "feedbackYes": "Confirmado en campo",
+    "feedbackNo": "Se veía bien"
   },
   "trafficLight": {
     "healthy": "Saludable",

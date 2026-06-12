@@ -31,6 +31,8 @@ export const UserSchema = z.object({
   tier: TierSchema,
   is_socially_disadvantaged: z.boolean().nullable(),
   is_beginning_farmer: z.boolean().nullable(),
+  phone_number: z.string().nullable(),
+  sms_alerts_enabled: z.boolean(),
 });
 
 export const AuthResponseSchema = z.object({
@@ -136,6 +138,27 @@ export const PaginatedIrrigationEventsSchema = z.object({
   limit: z.number(),
   results: z.array(IrrigationEventSchema),
 });
+
+export const AlertSchema = z.object({
+  id: z.number(),
+  farm_id: z.number(),
+  severity: StressSeveritySchema,
+  as_of_date: z.string(),
+  days_to_stress: z.number().nullable(),
+  channel: z.enum(["sms"]),
+  sent_at: z.string(),
+  feedback: z.enum(["yes", "no"]).nullable(),
+  feedback_at: z.string().nullable(),
+});
+
+export const PaginatedAlertsSchema = z.object({
+  total: z.number(),
+  skip: z.number(),
+  limit: z.number(),
+  results: z.array(AlertSchema),
+});
+
+export type Alert = z.infer<typeof AlertSchema>;
 
 export const BaselineIrrigationSchema = z.object({
   id: z.number(),
@@ -297,6 +320,8 @@ export async function updateMe(body: {
   locale?: "en" | "es";
   is_socially_disadvantaged?: boolean | null;
   is_beginning_farmer?: boolean | null;
+  phone_number?: string | null;
+  sms_alerts_enabled?: boolean;
 }): Promise<User> {
   return request(UserSchema, "/auth/me", { method: "PATCH", body });
 }
@@ -455,13 +480,23 @@ export async function logIrrigationEvent(
   });
 }
 
-/** Newest-first (backend orders by event_date desc). */
+/** Newest-first (backend orders by event_date desc). limit=100 is the
+ * backend pagination cap — the page truncates the display itself. */
 export async function getIrrigationEvents(
   farmId: number,
 ): Promise<IrrigationEvent[]> {
   const page = await request(
     PaginatedIrrigationEventsSchema,
-    `/farms/${farmId}/irrigation-events?limit=10`,
+    `/farms/${farmId}/irrigation-events?limit=100`,
+  );
+  return page.results;
+}
+
+/** Newest-first alert history (limit=100 is the backend pagination cap). */
+export async function getAlerts(farmId: number): Promise<Alert[]> {
+  const page = await request(
+    PaginatedAlertsSchema,
+    `/farms/${farmId}/alerts?limit=100`,
   );
   return page.results;
 }
