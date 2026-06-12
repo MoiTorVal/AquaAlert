@@ -21,10 +21,11 @@ from backend.config import settings
 from backend.database import SessionLocal
 from backend.enums import JobStatus, StressSeverity
 from backend.schemas import ETReadingCreate, WaterSavingsBase
-from backend.services import cimis_client, openet_client, savings_calculator, sms_service
+from backend.services import cimis_client, openet_client, rainfall_client, savings_calculator, sms_service
 from backend.services.aquacrop_runner import AquaCropInputError, compute_and_cache_water_stress
 from backend.services.cimis_client import CimisError
 from backend.services.openet_client import ET_SOURCE, OpenETError, OpenETRateLimitError
+from backend.services.rainfall_client import RainfallError
 from backend.services.sms_service import SmsError
 
 logger = logging.getLogger(__name__)
@@ -37,6 +38,10 @@ STALE_ET_DAYS = 7
 # Provisional gap-fill rows: Spatial CIMIS reference ET scaled by a crop
 # coefficient. Replaced in place by OpenET actuals as they land.
 PROVISIONAL_ET_SOURCE = "cimis:eto*kc"
+
+# Open-Meteo revises recent days as forecast-model values settle into
+# reanalysis — re-pull this trailing window every run (upsert replaces).
+RAIN_REFRESH_DAYS = 7
 
 # FAO-56 Table 12 mid-season Kc (midpoint where the table gives a range;
 # quinoa is absent from FAO-56 — literature consensus ~1.00). Mid-season-only
@@ -135,6 +140,31 @@ async def _gapfill_et_for_farm(db: Session, farm: models.Farm, today: date) -> i
     return len(readings)
 
 
+async def _pull_rainfall_for_farm(db: Session, farm: models.Farm, today: date) -> int:
+    """Cache observed daily rain (Open-Meteo) for the sim's Precipitation input.
+
+    Incremental from the last cached day, minus a trailing refresh window so
+    revised values land. Stops at yesterday (today's total is incomplete).
+    Returns rows attempted.
+    """
+    if farm.planting_date is None:
+        return 0
+    latest = crud.get_latest_rainfall_date(db, farm.id)
+    fetch_start = farm.planting_date if latest is None else latest + timedelta(days=1)
+    fetch_start = max(
+        farm.planting_date, min(fetch_start, today - timedelta(days=RAIN_REFRESH_DAYS))
+    )
+    fetch_end = today - timedelta(days=1)
+    if fetch_start > fetch_end:
+        return 0
+    centroid = to_shape(farm.field_polygon).centroid
+    points = await rainfall_client.fetch_daily_precip(
+        centroid.y, centroid.x, fetch_start, fetch_end, today=today
+    )
+    crud.upsert_rainfall_readings(db, farm.id, points)
+    return len(points)
+
+
 async def _maybe_send_stress_alert(db: Session, farm: models.Farm, output: models.AquaCropOutput) -> bool:
     """Text the farmer when severity escalates vs the previous sim day.
 
@@ -208,6 +238,14 @@ async def run_et_sim_job(db: Session | None = None, today: date | None = None) -
             except CimisError as exc:
                 notes.append(f"farm {farm.id}: CIMIS gap-fill failed: {exc}")
                 logger.warning("CIMIS gap-fill failed for farm %d: %s", farm.id, exc)
+
+            # Best-effort: rain only sharpens the sim — an Open-Meteo outage
+            # must never fail the farm (missing days simulate as 0 mm).
+            try:
+                await _pull_rainfall_for_farm(db, farm, today)
+            except RainfallError as exc:
+                notes.append(f"farm {farm.id}: rainfall fetch failed: {exc}")
+                logger.warning("Rainfall fetch failed for farm %d: %s", farm.id, exc)
 
             latest = crud.get_latest_et_date(db, farm.id)
             if latest is None:

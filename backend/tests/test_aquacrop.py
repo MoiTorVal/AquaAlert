@@ -161,6 +161,36 @@ def test_run_simulation_is_deterministic():
     assert first == second
 
 
+# ── rainfall input ───────────────────────────────────────────────────────────
+
+
+def test_rain_reduces_depletion():
+    rain = [(d, 6.0) for d, _ in CONSTANT_ET]
+    dry = run_simulation(CONSTANT_ET, "corn", SoilTexture.SandyLoam, START)
+    wet = run_simulation(CONSTANT_ET, "corn", SoilTexture.SandyLoam, START, rain_series=rain)
+    assert float(wet.depletion_mm) < float(dry.depletion_mm)
+
+
+def test_no_rain_series_matches_zero_rain():
+    none_given = run_simulation(CONSTANT_ET, "corn", SoilTexture.SandyLoam, START)
+    zeros = run_simulation(
+        CONSTANT_ET, "corn", SoilTexture.SandyLoam, START,
+        rain_series=[(d, 0.0) for d, _ in CONSTANT_ET],
+    )
+    assert none_given == zeros
+
+
+def test_weather_df_gap_days_get_zero_rain_not_ffill():
+    # ET series with a one-day hole; rain fell the day before the hole
+    et = [(START, 5.0), (START + timedelta(days=1), 5.0), (START + timedelta(days=3), 5.0)]
+    df = aquacrop_runner._build_weather_df(et, {START + timedelta(days=1): 10.0})
+    by_date = {row.Date.date(): row for row in df.itertuples()}
+    gap_day = START + timedelta(days=2)
+    assert by_date[START + timedelta(days=1)].Precipitation == 10.0
+    assert by_date[gap_day].Precipitation == 0.0  # a storm must not repeat
+    assert by_date[gap_day].ReferenceET == 5.0  # ET still forward-fills
+
+
 # ── DB edge: compute_and_cache_water_stress ──────────────────────────────────
 
 

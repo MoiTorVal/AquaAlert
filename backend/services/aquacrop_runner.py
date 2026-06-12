@@ -5,8 +5,9 @@ is the DB edge used by the Phase 6 scheduler. Route handlers only read the cache
 
 Modeling simplifications (documented for Phase 9 ML residual correction):
 - OpenET actual ET is fed to AquaCrop as ReferenceET.
-- Fixed growing-season temperatures (CA Central Valley climatology) and zero
-  precipitation (irrigated summer fields); rainfall integration is future work.
+- Fixed growing-season temperatures (CA Central Valley climatology).
+- Precipitation comes from cached Open-Meteo daily rain (rainfall_client via
+  the scheduler); days without a cached value fall back to 0 mm.
 """
 import logging
 from datetime import date
@@ -111,19 +112,26 @@ def project_days_to_stress(depletion_series_mm: list[float], raw_threshold_mm: f
     return max(1, round(days))
 
 
-def _build_weather_df(et_series: list[tuple[date, float]]) -> pd.DataFrame:
+def _build_weather_df(
+    et_series: list[tuple[date, float]],
+    rain_by_date: dict[date, float] | None = None,
+) -> pd.DataFrame:
+    rain_by_date = rain_by_date or {}
     dates = pd.DatetimeIndex([pd.Timestamp(d) for d, _ in et_series])
     df = pd.DataFrame(
         {
             "MinTemp": SIM_TMIN_C,
             "MaxTemp": SIM_TMAX_C,
-            "Precipitation": 0.0,
+            "Precipitation": [rain_by_date.get(d, 0.0) for d, _ in et_series],
             "ReferenceET": [et for _, et in et_series],
         },
         index=dates,
     )
-    # AquaCrop needs a continuous daily series; forward-fill small gaps.
-    df = df.asfreq("D").ffill()
+    # AquaCrop needs a continuous daily series; forward-fill small gaps —
+    # except rain, where repeating a storm would invent water (gaps get 0).
+    df = df.asfreq("D")
+    df["Precipitation"] = df["Precipitation"].fillna(0.0)
+    df = df.ffill()
     df["Date"] = df.index
     return df.reset_index(drop=True)
 
@@ -133,6 +141,7 @@ def run_simulation(
     crop_type: str | None,
     soil_texture: SoilTexture | None,
     planting_date: date | None,
+    rain_series: list[tuple[date, float]] | None = None,
 ) -> AquaCropOutputBase:
     """Run AquaCrop from the start of the ET series and return field state on the last day."""
     crop_name = map_crop_type(crop_type)
@@ -154,7 +163,7 @@ def run_simulation(
     model = AquaCropModel(
         sim_start_time=start.strftime("%Y/%m/%d"),
         sim_end_time=end.strftime("%Y/%m/%d"),
-        weather_df=_build_weather_df(et_series),
+        weather_df=_build_weather_df(et_series, dict(rain_series or [])),
         soil=Soil(soil_name),
         crop=Crop(crop_name, planting_date=planting_date.strftime("%m/%d")),
         initial_water_content=InitialWaterContent(value=["FC"]),
@@ -193,10 +202,16 @@ def compute_and_cache_water_stress(db: Session, farm: models.Farm, as_of_date: d
         db=db, farm_id=farm.id, start_date=farm.planting_date, end_date=as_of_date
     )
     et_series = [(r.reading_date, float(r.et_mm)) for r in readings]
+    rain_series = (
+        crud.get_rainfall_series(db, farm.id, start_date=farm.planting_date, end_date=as_of_date)
+        if farm.planting_date is not None
+        else []
+    )
     result = run_simulation(
         et_series=et_series,
         crop_type=farm.crop_type,
         soil_texture=farm.soil_type,
         planting_date=farm.planting_date,
+        rain_series=rain_series,
     )
     return crud.upsert_aquacrop_output(db=db, farm_id=farm.id, output=result)

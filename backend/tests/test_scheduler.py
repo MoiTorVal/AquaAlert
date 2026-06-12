@@ -9,15 +9,17 @@ from backend import crud, models
 from backend.config import settings
 from backend.enums import JobStatus, Locale, SoilTexture, StressSeverity
 from backend.schemas import AquaCropOutputBase, BaselineIrrigationCreate, ETReadingCreate, FarmCreate, IrrigationEventCreate
-from backend.services import cimis_client, openet_client, savings_calculator, sms_service
+from backend.services import cimis_client, openet_client, rainfall_client, savings_calculator, sms_service
 from backend.services.aquacrop_runner import CROP_TYPE_TO_AQUACROP
 from backend.services.cimis_client import CimisUnavailableError
 from backend.services.openet_client import ET_SOURCE, OpenETRateLimitError, OpenETUnavailableError
+from backend.services.rainfall_client import RainfallUnavailableError
 from backend.services.sms_service import SmsError
 from backend.services.scheduler import (
     ET_SIM_JOB_NAME,
     KC_MID,
     PROVISIONAL_ET_SOURCE,
+    RAIN_REFRESH_DAYS,
     SAVINGS_JOB_NAME,
     is_et_stale,
     run_et_sim_job,
@@ -27,6 +29,22 @@ from backend.services.scheduler import (
 START = date(2026, 5, 1)
 TODAY = date(2026, 6, 9)  # a Tuesday; last completed week = Jun 1 - Jun 7
 FIELD_WKT = "POLYGON((-120.1 36.9, -120.1 36.91, -120.09 36.91, -120.09 36.9, -120.1 36.9))"
+
+
+@pytest.fixture(autouse=True)
+def no_rain(monkeypatch):
+    """Stub Open-Meteo for every scheduler test (no network); records calls.
+
+    Individual tests override with rain data where it matters.
+    """
+    calls = []
+
+    async def fake_fetch(lat, lng, start_date, end_date, today=None, transport=None):
+        calls.append((start_date, end_date))
+        return []
+
+    monkeypatch.setattr(rainfall_client, "fetch_daily_precip", fake_fetch)
+    return calls
 
 
 # ── savings_calculator (pure) ────────────────────────────────────────────────
@@ -357,6 +375,59 @@ def test_gapfill_flags_provisional_only_farms(db, sim_farm, fake_cimis, monkeypa
     assert "stale ET" not in job_run.detail  # provisional rows keep the series fresh
     output = crud.get_latest_aquacrop_output(db, sim_farm.id)
     assert output.as_of_date == TODAY - timedelta(days=1)
+
+
+# ── Open-Meteo rainfall pull ─────────────────────────────────────────────────
+
+
+def test_rainfall_pull_caches_rain_and_feeds_sim(db, sim_farm, fake_et, monkeypatch):
+    rain_day = TODAY - timedelta(days=3)
+
+    async def rainy(lat, lng, start_date, end_date, today=None, transport=None):
+        return [{"reading_date": rain_day, "precip_mm": 12.5}]
+
+    monkeypatch.setattr(rainfall_client, "fetch_daily_precip", rainy)
+    job_run = asyncio.run(run_et_sim_job(db=db, today=TODAY))
+
+    assert job_run.status == JobStatus.SUCCESS
+    assert crud.get_rainfall_series(db, sim_farm.id, START, TODAY) == [(rain_day, 12.5)]
+    assert crud.get_latest_aquacrop_output(db, sim_farm.id) is not None
+
+
+def test_rainfall_pull_backfills_then_refreshes_trailing_window(db, sim_farm, fake_et, no_rain):
+    asyncio.run(run_et_sim_job(db=db, today=TODAY))
+    # first run backfills the whole season up to yesterday
+    assert no_rain[0] == (START, TODAY - timedelta(days=1))
+
+    crud.upsert_rainfall_readings(
+        db, sim_farm.id, [{"reading_date": TODAY - timedelta(days=1), "precip_mm": 0.0}]
+    )
+    asyncio.run(run_et_sim_job(db=db, today=TODAY + timedelta(days=1)))
+    # later runs re-pull only the trailing refresh window (revisable days)
+    assert no_rain[1] == (
+        TODAY + timedelta(days=1) - timedelta(days=RAIN_REFRESH_DAYS),
+        TODAY,
+    )
+
+
+def test_rainfall_refresh_updates_revised_values(db, sim_farm):
+    day = TODAY - timedelta(days=2)
+    crud.upsert_rainfall_readings(db, sim_farm.id, [{"reading_date": day, "precip_mm": 1.0}])
+    crud.upsert_rainfall_readings(db, sim_farm.id, [{"reading_date": day, "precip_mm": 4.0}])
+    assert crud.get_rainfall_series(db, sim_farm.id, START, TODAY) == [(day, 4.0)]
+
+
+def test_rainfall_failure_does_not_fail_farm(db, sim_farm, fake_et, monkeypatch):
+    async def meteo_down(*args, **kwargs):
+        raise RainfallUnavailableError("503")
+
+    monkeypatch.setattr(rainfall_client, "fetch_daily_precip", meteo_down)
+    job_run = asyncio.run(run_et_sim_job(db=db, today=TODAY))
+
+    assert job_run.status == JobStatus.SUCCESS
+    assert job_run.farms_processed == 1
+    assert "rainfall fetch failed" in job_run.detail
+    assert crud.get_latest_aquacrop_output(db, sim_farm.id) is not None
 
 
 def test_water_stress_reports_latest_actual_date(client, db, farm):

@@ -9,7 +9,7 @@ from geoalchemy2.elements import WKTElement
 from sqlalchemy import func, or_
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session, Query
-from datetime import datetime, date
+from datetime import datetime, date, time, timedelta, timezone
 
 
 def _wrap_field_polygon(data: dict) -> dict:
@@ -83,6 +83,60 @@ def count_weather_readings_by_farm(
     end_date: datetime | None = None,
 ) -> int:
     return _weather_readings_base_query(db, farm_id, start_date, end_date).count()
+
+
+def _day_start_utc(d: date) -> datetime:
+    return datetime.combine(d, time.min, tzinfo=timezone.utc)
+
+
+def upsert_rainfall_readings(db: Session, farm_id: int, points: list[dict]) -> None:
+    """Insert daily rainfall rows (recorded_at = midnight UTC), replacing
+    rainfall_mm in place — Open-Meteo revises recent days as actuals settle."""
+    if not points:
+        return
+    stmt = pg_insert(models.WeatherReading).values([
+        {
+            "farm_id": farm_id,
+            "recorded_at": _day_start_utc(p["reading_date"]),
+            "rainfall_mm": p["precip_mm"],
+        }
+        for p in points
+    ])
+    stmt = stmt.on_conflict_do_update(
+        constraint="uq_weather_farm_recorded",
+        set_={"rainfall_mm": stmt.excluded.rainfall_mm},
+    )
+    db.execute(stmt)
+    db.commit()
+
+
+def get_latest_rainfall_date(db: Session, farm_id: int) -> date | None:
+    latest = (
+        db.query(func.max(models.WeatherReading.recorded_at))
+        .filter(
+            models.WeatherReading.farm_id == farm_id,
+            models.WeatherReading.rainfall_mm.isnot(None),
+        )
+        .scalar()
+    )
+    return latest.date() if latest else None
+
+
+def get_rainfall_series(
+    db: Session, farm_id: int, start_date: date, end_date: date
+) -> list[tuple[date, float]]:
+    rows = (
+        db.query(models.WeatherReading.recorded_at, models.WeatherReading.rainfall_mm)
+        .filter(
+            models.WeatherReading.farm_id == farm_id,
+            models.WeatherReading.rainfall_mm.isnot(None),
+            models.WeatherReading.recorded_at >= _day_start_utc(start_date),
+            models.WeatherReading.recorded_at < _day_start_utc(end_date + timedelta(days=1)),
+        )
+        .order_by(models.WeatherReading.recorded_at)
+        .all()
+    )
+    return [(recorded_at.date(), float(rainfall_mm)) for recorded_at, rainfall_mm in rows]
 
 
 def create_irrigation_event(
