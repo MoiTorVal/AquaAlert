@@ -14,9 +14,12 @@ type ChecklistItem = {
 export default function PendingAssessmentCard({
   farm,
   onAddDetails,
+  rain7In = null,
 }: {
   farm: Farm;
   onAddDetails: () => void;
+  /** Trailing-7-day rainfall in inches from cached weather; null = no data. */
+  rain7In?: number | null;
 }) {
   const t = useTranslations("pendingAssessment");
 
@@ -73,6 +76,12 @@ export default function PendingAssessmentCard({
           </span>
         </li>
       </ul>
+
+      {rain7In != null && (
+        <p className="mt-4 rounded-lg bg-blue-50 px-3 py-2 text-sm text-gray-600">
+          {t("rainLine", { inches: rain7In.toFixed(2) })}
+        </p>
+      )}
 
       {!setupComplete && (
         <button

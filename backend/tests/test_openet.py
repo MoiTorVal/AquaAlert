@@ -278,6 +278,27 @@ def test_et_cache_hit_skips_fetch(client, db, polygon_farm, monkeypatch):
     assert body["as_of"] == "2026-05-03"
 
 
+def test_et_cache_only_never_fetches_despite_missing_days(
+    client, db, polygon_farm, monkeypatch
+):
+    # Only 2 of 5 requested days are cached — cache_only must serve the
+    # partial result without spending an OpenET request.
+    _seed_et(db, polygon_farm.id, [date(2026, 5, 1), date(2026, 5, 2)])
+
+    async def boom(*args, **kwargs):
+        raise AssertionError("OpenET must not be called when cache_only=true")
+
+    monkeypatch.setattr(openet_client, "fetch_daily_et", boom)
+    response = client.get(
+        f"/farms/{polygon_farm.id}/et",
+        params={"from": "2026-05-01", "to": "2026-05-05", "cache_only": "true"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body["results"]) == 2
+    assert body["as_of"] == "2026-05-02"
+
+
 def test_et_cache_miss_fetches_and_caches(client, db, polygon_farm, monkeypatch):
     calls = []
     points = [

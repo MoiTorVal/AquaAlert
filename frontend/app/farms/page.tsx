@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   deleteFarm,
   getFarms,
@@ -28,10 +28,14 @@ export default function FarmsPage() {
 type StressMap = Record<number, WaterStress | null>;
 
 function FarmsContent() {
+  const t = useTranslations("farms");
   const router = useRouter();
   const locale = useLocale();
   const [farms, setFarms] = useState<Farm[]>([]);
   const [stressMap, setStressMap] = useState<StressMap>({});
+  // Today's date frozen at fetch time: render must stay pure, and "is this
+  // farm planted yet" should match the data snapshot anyway.
+  const [todayIso, setTodayIso] = useState("");
   const [creating, setCreating] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -44,6 +48,7 @@ function FarmsContent() {
       .then((loaded) => {
         if (!active) return;
         setFarms(loaded);
+        setTodayIso(new Date().toISOString().slice(0, 10));
         setLoading(false);
         // Stress loads per farm after the list renders; a farm whose
         // stress call fails just keeps showing the loading dash.
@@ -58,7 +63,7 @@ function FarmsContent() {
       })
       .catch(() => {
         if (!active) return;
-        setError("Failed to load farms. Please try again later.");
+        setError("load");
         setLoading(false);
       });
     return () => {
@@ -67,7 +72,7 @@ function FarmsContent() {
   }, []);
 
   const handleDelete = async (farm: Farm) => {
-    if (!window.confirm(`Delete "${farm.name}"? This cannot be undone.`)) {
+    if (!window.confirm(t("deleteConfirm", { name: farm.name }))) {
       return;
     }
     setActionError(null);
@@ -75,14 +80,12 @@ function FarmsContent() {
       await deleteFarm(farm.id);
       setFarms((prev) => prev.filter((f) => f.id !== farm.id));
     } catch (err) {
-      setActionError(
-        err instanceof Error ? err.message : "Failed to delete farm",
-      );
+      setActionError(err instanceof Error ? err.message : t("deleteFailed"));
     }
   };
 
   if (loading) return <FarmsSkeleton />;
-  if (error) return <ErrorState message={error} />;
+  if (error) return <ErrorState />;
   if (farms.length === 0)
     return (
       <>
@@ -111,23 +114,23 @@ function FarmsContent() {
         </p>
       )}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">My Farms</h1>
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
         <button
           onClick={() => setCreating(true)}
           className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700"
         >
-          + Add Farm
+          {t("addFarm")}
         </button>
       </div>
 
       <div className="mb-6 grid grid-cols-3 gap-4">
-        <SummaryStat label="Farms" value={String(farms.length)} />
+        <SummaryStat label={t("statFarms")} value={String(farms.length)} />
         <SummaryStat
-          label="Total acres"
+          label={t("statAcres")}
           value={totalAcres > 0 ? totalAcres.toLocaleString() : "—"}
         />
         <SummaryStat
-          label="Need attention"
+          label={t("statAttention")}
           value={stressLoaded ? String(needsAttention) : "…"}
           accent={needsAttention > 0}
         />
@@ -137,13 +140,13 @@ function FarmsContent() {
         <table className="w-full text-sm border-collapse">
           <thead>
             <tr className="border-b border-gray-200 text-left text-gray-500">
-              <th className="px-3 pb-3 font-medium">Name</th>
-              <th className="px-3 pb-3 font-medium">Status</th>
-              <th className="px-3 pb-3 font-medium">Crop</th>
-              <th className="px-3 pb-3 font-medium">Location</th>
-              <th className="px-3 pb-3 font-medium text-right">Acres</th>
-              <th className="px-3 pb-3 font-medium">Planted</th>
-              <th className="px-3 pb-3" aria-label="Actions" />
+              <th className="px-3 pb-3 font-medium">{t("colName")}</th>
+              <th className="px-3 pb-3 font-medium">{t("colStatus")}</th>
+              <th className="px-3 pb-3 font-medium">{t("colCrop")}</th>
+              <th className="px-3 pb-3 font-medium">{t("colLocation")}</th>
+              <th className="px-3 pb-3 font-medium text-right">{t("colAcres")}</th>
+              <th className="px-3 pb-3 font-medium">{t("colPlanted")}</th>
+              <th className="px-3 pb-3" aria-label={t("colStatus")} />
             </tr>
           </thead>
           <tbody>
@@ -160,6 +163,8 @@ function FarmsContent() {
                   <StatusCell
                     stress={stressMap[farm.id]}
                     loaded={farm.id in stressMap}
+                    plantingDate={farm.planting_date}
+                    todayIso={todayIso}
                   />
                 </td>
                 <td className="px-3 py-3 text-gray-600">
@@ -201,15 +206,19 @@ function FarmsContent() {
               <StatusCell
                 stress={stressMap[farm.id]}
                 loaded={farm.id in stressMap}
+                plantingDate={farm.planting_date}
+                todayIso={todayIso}
               />
             </div>
             <div className="text-sm text-gray-500 mt-1">
-              {farm.crop_type ? displayName(farm.crop_type) : "No crop"} ·{" "}
-              {farm.location ? displayName(farm.location) : "No location"}
+              {farm.crop_type ? displayName(farm.crop_type) : t("noCrop")} ·{" "}
+              {farm.location ? displayName(farm.location) : t("noLocation")}
             </div>
             <div className="text-sm text-gray-400 mt-1">
-              {farm.acreage_acres ? `${farm.acreage_acres} ac` : "Area unknown"}{" "}
-              · Planted {formatDate(farm.planting_date, locale)}
+              {farm.acreage_acres
+                ? t("acShort", { acres: farm.acreage_acres })
+                : t("areaUnknown")}{" "}
+              · {t("plantedMobile", { date: formatDate(farm.planting_date, locale) })}
             </div>
           </Link>
         ))}
@@ -257,18 +266,23 @@ function SummaryStat({
 }
 
 const STATUS_STYLES = {
-  green: { dot: "bg-green-500", label: "Healthy" },
-  yellow: { dot: "bg-yellow-400", label: "Approaching" },
-  red: { dot: "bg-red-500", label: "Stressed" },
+  green: { dot: "bg-green-500", labelKey: "statusHealthy" },
+  yellow: { dot: "bg-yellow-400", labelKey: "statusApproaching" },
+  red: { dot: "bg-red-500", labelKey: "statusStressed" },
 } as const;
 
 function StatusCell({
   stress,
   loaded,
+  plantingDate,
+  todayIso,
 }: {
   stress: WaterStress | null | undefined;
   loaded: boolean;
+  plantingDate: string | null;
+  todayIso: string;
 }) {
+  const t = useTranslations("farms");
   if (!loaded) {
     return (
       <span className="inline-block h-2.5 w-16 animate-pulse rounded bg-gray-100" />
@@ -276,21 +290,29 @@ function StatusCell({
   }
   const severity = stress?.severity;
   if (!severity) {
+    // No assessment: a field whose planting date is in the future isn't
+    // "pending" — it isn't planted yet.
+    const planned = plantingDate != null && plantingDate > todayIso;
     return (
       <span className="inline-flex items-center gap-2 text-gray-400">
-        <span aria-hidden className="h-2.5 w-2.5 rounded-full bg-gray-300" />
-        Pending
+        <span
+          aria-hidden
+          className={`h-2.5 w-2.5 rounded-full ${planned ? "bg-sky-300" : "bg-gray-300"}`}
+        />
+        {planned ? t("statusPlanned") : t("statusPending")}
       </span>
     );
   }
-  const { dot, label } = STATUS_STYLES[severity];
+  const { dot, labelKey } = STATUS_STYLES[severity];
   const days = stress?.days_to_stress;
   return (
     <span className="inline-flex items-center gap-2 text-gray-700">
       <span aria-hidden className={`h-2.5 w-2.5 rounded-full ${dot}`} />
-      {label}
+      {t(labelKey)}
       {severity !== "red" && days != null && (
-        <span className="text-xs text-gray-400">{days}d to stress</span>
+        <span className="text-xs text-gray-400">
+          {t("daysToStress", { days })}
+        </span>
       )}
     </span>
   );
@@ -307,6 +329,7 @@ function RowMenu({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const t = useTranslations("farms");
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -322,7 +345,7 @@ function RowMenu({
   return (
     <div ref={ref} className="relative inline-block" onClick={(e) => e.stopPropagation()}>
       <button
-        aria-label={`Actions for ${farmName}`}
+        aria-label={t("actionsFor", { name: farmName })}
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
@@ -343,7 +366,7 @@ function RowMenu({
             }}
             className="block w-full px-3 py-1.5 text-left text-gray-700 hover:bg-gray-50"
           >
-            Edit
+            {t("edit")}
           </button>
           <button
             role="menuitem"
@@ -353,7 +376,7 @@ function RowMenu({
             }}
             className="block w-full px-3 py-1.5 text-left text-red-600 hover:bg-red-50"
           >
-            Delete
+            {t("delete")}
           </button>
         </div>
       )}
@@ -375,28 +398,28 @@ function FarmsSkeleton() {
 }
 
 function EmptyState({ onCreate }: { onCreate: () => void }) {
+  const t = useTranslations("farms");
   return (
     <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center text-center p-6">
-      <h2 className="text-xl font-semibold mb-2">No farms yet</h2>
-      <p className="text-gray-400 mb-6">
-        Add your first farm to start tracking water stress.
-      </p>
+      <h2 className="text-xl font-semibold mb-2">{t("emptyTitle")}</h2>
+      <p className="text-gray-400 mb-6">{t("emptyBody")}</p>
       <button
         onClick={onCreate}
         className="bg-gray-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-gray-700"
       >
-        + Create your first farm
+        {t("createFirst")}
       </button>
     </div>
   );
 }
 
-function ErrorState({ message }: { message: string }) {
+function ErrorState() {
+  const t = useTranslations("farms");
   return (
     <main className="p-6 max-w-6xl mx-auto flex flex-col items-center justify-center min-h-[60vh] text-center">
       <div className="text-5xl mb-4">⚠️</div>
-      <h2 className="text-xl font-semibold mb-2">Failed to load farms</h2>
-      <p className="text-red-500 text-sm">{message}</p>
+      <h2 className="text-xl font-semibold mb-2">{t("loadFailedTitle")}</h2>
+      <p className="text-red-500 text-sm">{t("loadFailedBody")}</p>
     </main>
   );
 }

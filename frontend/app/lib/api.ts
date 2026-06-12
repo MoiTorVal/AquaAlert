@@ -139,6 +139,44 @@ export const PaginatedIrrigationEventsSchema = z.object({
   results: z.array(IrrigationEventSchema),
 });
 
+export const ETReadingSchema = z.object({
+  id: z.number(),
+  farm_id: z.number(),
+  reading_date: z.string(),
+  et_mm: z.coerce.number(),
+  source: z.string(),
+  fetched_at: z.string().nullable(),
+});
+
+export const ETSeriesSchema = z.object({
+  farm_id: z.number(),
+  start_date: z.string(),
+  end_date: z.string(),
+  as_of: z.string().nullable(),
+  results: z.array(ETReadingSchema),
+});
+
+export type ETSeries = z.infer<typeof ETSeriesSchema>;
+
+export const WeatherReadingSchema = z.object({
+  id: z.number(),
+  farm_id: z.number(),
+  recorded_at: z.string(),
+  rainfall_mm: z.coerce.number().nullable(),
+  temperature_c: z.coerce.number().nullable(),
+  humidity_pct: z.coerce.number().nullable(),
+  wind_speed_kph: z.coerce.number().nullable(),
+});
+
+export const PaginatedWeatherSchema = z.object({
+  total: z.number(),
+  skip: z.number(),
+  limit: z.number(),
+  results: z.array(WeatherReadingSchema),
+});
+
+export type WeatherReading = z.infer<typeof WeatherReadingSchema>;
+
 export const AlertSchema = z.object({
   id: z.number(),
   farm_id: z.number(),
@@ -488,6 +526,31 @@ export async function getIrrigationEvents(
   const page = await request(
     PaginatedIrrigationEventsSchema,
     `/farms/${farmId}/irrigation-events?limit=100`,
+  );
+  return page.results;
+}
+
+/** Cached ET only — cache_only=true means this can never spend an OpenET
+ * API request (free tier is 100/month). Dashboard reads must stay cheap. */
+export async function getEtSeries(
+  farmId: number,
+  from: string,
+  to: string,
+): Promise<ETSeries> {
+  return request(
+    ETSeriesSchema,
+    `/farms/${farmId}/et?from=${from}&to=${to}&cache_only=true`,
+  );
+}
+
+/** Weather rows (scheduler-cached rainfall) on/after startDate, oldest first. */
+export async function getWeatherReadings(
+  farmId: number,
+  startDate: string,
+): Promise<WeatherReading[]> {
+  const page = await request(
+    PaginatedWeatherSchema,
+    `/farms/${farmId}/weather?start_date=${startDate}&limit=100`,
   );
   return page.results;
 }

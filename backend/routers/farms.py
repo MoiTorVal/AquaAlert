@@ -165,6 +165,11 @@ async def get_et_series(
     farm_id: int,
     from_date: date = Query(alias="from"),
     to_date: date = Query(alias="to"),
+    cache_only: bool = Query(
+        False,
+        description="Serve only cached readings; never call the OpenET API. "
+        "Dashboard reads must set this — the free tier is 100 requests/month.",
+    ),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -182,7 +187,7 @@ async def get_et_series(
     requested = [from_date + timedelta(days=i) for i in range((to_date - from_date).days + 1)]
     missing = [d for d in requested if d not in cached_dates and d <= today]
 
-    if missing:
+    if missing and not cache_only:
         geometry = openet_client.polygon_to_geometry(to_shape(db_farm.field_polygon))
         try:
             points = await openet_client.fetch_daily_et(geometry, missing[0], missing[-1])

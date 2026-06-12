@@ -10,6 +10,40 @@
     "signup": "Sign up",
     "logout": "Log Out"
   },
+  "farms": {
+    "title": "My Farms",
+    "addFarm": "+ Add Farm",
+    "statFarms": "Farms",
+    "statAcres": "Total acres",
+    "statAttention": "Need attention",
+    "colName": "Name",
+    "colStatus": "Status",
+    "colCrop": "Crop",
+    "colLocation": "Location",
+    "colAcres": "Acres",
+    "colPlanted": "Planted",
+    "statusHealthy": "Healthy",
+    "statusApproaching": "Approaching",
+    "statusStressed": "Stressed",
+    "statusPending": "Pending",
+    "statusPlanned": "Planned",
+    "daysToStress": "{days}d to stress",
+    "edit": "Edit",
+    "delete": "Delete",
+    "actionsFor": "Actions for {name}",
+    "deleteConfirm": "Delete \"{name}\"? This cannot be undone.",
+    "deleteFailed": "Failed to delete farm",
+    "loadFailedTitle": "Failed to load farms",
+    "loadFailedBody": "Failed to load farms. Please try again later.",
+    "emptyTitle": "No farms yet",
+    "emptyBody": "Add your first farm to start tracking water stress.",
+    "createFirst": "+ Create your first farm",
+    "noCrop": "No crop",
+    "noLocation": "No location",
+    "areaUnknown": "Area unknown",
+    "plantedMobile": "Planted {date}",
+    "acShort": "{acres} ac"
+  },
   "farmDetail": {
     "back": "← My Farms",
     "logIrrigation": "+ Log Irrigation",
@@ -32,7 +66,26 @@
     "drawBoundary": "Draw boundary",
     "thisWeek": "{gallons} gal this week",
     "viewAll": "View all ({count})",
-    "showLess": "Show less"
+    "showLess": "Show less",
+    "etReadout": "7-day crop water use (ET)",
+    "etValue": "{inches} in",
+    "etAsOf": "as of {date}",
+    "holdsWater": "Holds ~{awc} in/ft of water",
+    "acInWeek": "≈ {acin} ac-in"
+  },
+  "soil": {
+    "Sandy": "Sandy",
+    "LoamySand": "Loamy Sand",
+    "SandyLoam": "Sandy Loam",
+    "Loam": "Loam",
+    "SiltLoam": "Silt Loam",
+    "Silt": "Silt",
+    "SandyClayLoam": "Sandy Clay Loam",
+    "ClayLoam": "Clay Loam",
+    "SiltyClayLoam": "Silty Clay Loam",
+    "SandyClay": "Sandy Clay",
+    "SiltyClay": "Silty Clay",
+    "Clay": "Clay"
   },
   "pendingAssessment": {
     "setupTitle": "Finish setup to start assessments",
@@ -45,7 +98,8 @@
     "soil": "Soil type",
     "satellitePending": "First satellite reading — expected within a day",
     "satelliteBlocked": "Satellite readings — start after setup is complete",
-    "addDetails": "Add missing details"
+    "addDetails": "Add missing details",
+    "rainLine": "Rain, last 7 days: {inches} in"
   },
   "alerts": {
     "title": "Alerts",

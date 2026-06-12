@@ -63,4 +63,22 @@ describe("PendingAssessmentCard", () => {
       screen.queryByRole("button", { name: "Add missing details" }),
     ).not.toBeInTheDocument();
   });
+
+  it("shows recent rainfall when cached weather exists", () => {
+    renderWithIntl(
+      <PendingAssessmentCard
+        farm={completeFarm}
+        rain7In={0.42}
+        onAddDetails={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Rain, last 7 days: 0.42 in")).toBeInTheDocument();
+  });
+
+  it("hides the rainfall line without data", () => {
+    renderWithIntl(
+      <PendingAssessmentCard farm={completeFarm} onAddDetails={vi.fn()} />,
+    );
+    expect(screen.queryByText(/Rain, last 7 days/)).not.toBeInTheDocument();
+  });
 });

@@ -15,6 +15,13 @@ export function formatDate(iso: string | null, locale: string): string {
   }).format(parsed);
 }
 
+/** Date-only arithmetic in UTC: isoAddDays("2026-06-10", -6) → "2026-06-04". */
+export function isoAddDays(iso: string, days: number): string {
+  const parsed = new Date(`${iso.slice(0, 10)}T00:00:00Z`);
+  parsed.setUTCDate(parsed.getUTCDate() + days);
+  return parsed.toISOString().slice(0, 10);
+}
+
 /** Capitalizes each word for display ("moi's farm" → "Moi's Farm") without
  * touching the stored value or already-capitalized input ("USDA" stays). */
 export function displayName(value: string | null): string {

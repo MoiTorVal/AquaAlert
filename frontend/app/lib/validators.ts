@@ -108,11 +108,6 @@ export const SOIL_TEXTURES = [
   "Clay",
 ] as const;
 
-/** "SandyClayLoam" -> "Sandy Clay Loam" — display only; the API keeps the enum value. */
-export function soilLabel(value: string): string {
-  return value.replace(/([a-z])([A-Z])/g, "$1 $2");
-}
-
 export const CreateFarmFormSchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
   location: z.string().trim().optional(),

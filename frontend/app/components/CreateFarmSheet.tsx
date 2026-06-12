@@ -9,7 +9,6 @@ import { createFarm, type Farm } from "../lib/api";
 import {
   CreateFarmFormSchema,
   SOIL_TEXTURES,
-  soilLabel,
   type CreateFarmFormValues,
 } from "../lib/validators";
 
@@ -29,6 +28,7 @@ export default function CreateFarmSheet({
   onCreated: (farm: Farm) => void;
 }) {
   const t = useTranslations("createFarm");
+  const tSoil = useTranslations("soil");
   const [serverError, setServerError] = useState<string | null>(null);
   const [fieldPolygon, setFieldPolygon] = useState<string | null>(null);
   const [drawing, setDrawing] = useState(false);
@@ -122,7 +122,7 @@ export default function CreateFarmSheet({
                 <option value="">—</option>
                 {SOIL_TEXTURES.map((s) => (
                   <option key={s} value={s}>
-                    {soilLabel(s)}
+                    {tSoil(s)}
                   </option>
                 ))}
               </select>

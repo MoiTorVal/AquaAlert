@@ -10,6 +10,40 @@
     "signup": "Regístrate",
     "logout": "Cerrar sesión"
   },
+  "farms": {
+    "title": "Mis ranchos",
+    "addFarm": "+ Agregar rancho",
+    "statFarms": "Ranchos",
+    "statAcres": "Acres totales",
+    "statAttention": "Requieren atención",
+    "colName": "Nombre",
+    "colStatus": "Estado",
+    "colCrop": "Cultivo",
+    "colLocation": "Ubicación",
+    "colAcres": "Acres",
+    "colPlanted": "Sembrado",
+    "statusHealthy": "Saludable",
+    "statusApproaching": "Acercándose",
+    "statusStressed": "Estresado",
+    "statusPending": "Pendiente",
+    "statusPlanned": "Planeado",
+    "daysToStress": "{days}d para estrés",
+    "edit": "Editar",
+    "delete": "Eliminar",
+    "actionsFor": "Acciones para {name}",
+    "deleteConfirm": "¿Eliminar \"{name}\"? Esto no se puede deshacer.",
+    "deleteFailed": "No se pudo eliminar el rancho",
+    "loadFailedTitle": "No se pudieron cargar los ranchos",
+    "loadFailedBody": "No se pudieron cargar los ranchos. Inténtelo de nuevo más tarde.",
+    "emptyTitle": "Aún no hay ranchos",
+    "emptyBody": "Agregue su primer rancho para comenzar a monitorear el estrés hídrico.",
+    "createFirst": "+ Crear su primer rancho",
+    "noCrop": "Sin cultivo",
+    "noLocation": "Sin ubicación",
+    "areaUnknown": "Área desconocida",
+    "plantedMobile": "Sembrado {date}",
+    "acShort": "{acres} ac"
+  },
   "farmDetail": {
     "back": "← Mis ranchos",
     "logIrrigation": "+ Registrar riego",
@@ -32,7 +66,26 @@
     "drawBoundary": "Dibujar límite",
     "thisWeek": "{gallons} gal esta semana",
     "viewAll": "Ver todos ({count})",
-    "showLess": "Ver menos"
+    "showLess": "Ver menos",
+    "etReadout": "Consumo de agua del cultivo (ET, 7 días)",
+    "etValue": "{inches} pulg",
+    "etAsOf": "al {date}",
+    "holdsWater": "Retiene ~{awc} pulg/pie de agua",
+    "acInWeek": "≈ {acin} ac-in"
+  },
+  "soil": {
+    "Sandy": "Arenoso",
+    "LoamySand": "Arena francosa",
+    "SandyLoam": "Franco arenoso",
+    "Loam": "Franco",
+    "SiltLoam": "Franco limoso",
+    "Silt": "Limoso",
+    "SandyClayLoam": "Franco arcillo-arenoso",
+    "ClayLoam": "Franco arcilloso",
+    "SiltyClayLoam": "Franco arcillo-limoso",
+    "SandyClay": "Arcillo-arenoso",
+    "SiltyClay": "Arcillo-limoso",
+    "Clay": "Arcilloso"
   },
   "pendingAssessment": {
     "setupTitle": "Complete la configuración para iniciar las evaluaciones",
@@ -45,7 +98,8 @@
     "soil": "Tipo de suelo",
     "satellitePending": "Primera lectura satelital — se espera dentro de un día",
     "satelliteBlocked": "Lecturas satelitales — comienzan al completar la configuración",
-    "addDetails": "Agregar datos faltantes"
+    "addDetails": "Agregar datos faltantes",
+    "rainLine": "Lluvia, últimos 7 días: {inches} pulg"
   },
   "alerts": {
     "title": "Alertas",

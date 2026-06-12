@@ -1,5 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { displayName, formatDate } from "./format";
+import { displayName, formatDate, isoAddDays } from "./format";
+
+describe("isoAddDays", () => {
+  it("adds and subtracts days", () => {
+    expect(isoAddDays("2026-06-10", -6)).toBe("2026-06-04");
+    expect(isoAddDays("2026-06-10", 1)).toBe("2026-06-11");
+  });
+
+  it("crosses month and year boundaries", () => {
+    expect(isoAddDays("2026-03-01", -1)).toBe("2026-02-28");
+    expect(isoAddDays("2026-01-01", -1)).toBe("2025-12-31");
+  });
+});
 
 describe("formatDate", () => {
   it("formats ISO dates for display", () => {

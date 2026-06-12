@@ -8,18 +8,20 @@ import {
   ApiError,
   getAlerts,
   getBaselineIrrigations,
+  getEtSeries,
   getFarm,
   getIrrigationEvents,
   getWaterSavings,
   getWaterStress,
+  getWeatherReadings,
   type Alert,
   type Farm,
   type IrrigationEvent,
   type WaterSavingsRow,
   type WaterStress,
 } from "../../lib/api";
-import { soilLabel } from "../../lib/validators";
-import { displayName, formatDate } from "../../lib/format";
+import { displayName, formatDate, isoAddDays } from "../../lib/format";
+import { AWC_IN_PER_FT, gallonsToAcreInches } from "../../lib/soil";
 import TrafficLightCard from "../../components/TrafficLightCard";
 import StressDetails from "../../components/StressDetails";
 import SavingsCard from "../../components/SavingsCard";
@@ -53,6 +55,13 @@ type LoadState =
       // Oldest event_date that still counts as "this week", fixed at fetch
       // time (render must stay pure — no Date.now() there).
       weekCutoff: string;
+      // 7-day cumulative crop ET in inches + its as-of date (cache-only
+      // read — never spends an OpenET request). Null = no cached ET.
+      et7In: number | null;
+      etAsOf: string | null;
+      // Trailing-7-day rainfall in inches for the pending hero. Null = no
+      // cached weather rows.
+      rain7In: number | null;
     };
 
 export default function FarmDetailPage({
@@ -69,6 +78,7 @@ export default function FarmDetailPage({
 
 function FarmDetailContent({ params }: { params: Promise<{ id: string }> }) {
   const t = useTranslations("farmDetail");
+  const tSoil = useTranslations("soil");
   const locale = useLocale();
   const { id } = use(params);
   const farmId = Number(id);
@@ -96,6 +106,43 @@ function FarmDetailContent({ params }: { params: Promise<{ id: string }> }) {
             getIrrigationEvents(farmId),
             getAlerts(farmId),
           ]);
+        const weekCutoff = new Date(Date.now() - 6 * 86_400_000)
+          .toISOString()
+          .slice(0, 10);
+
+        // Optional extras — failures here must never fail the page.
+        let et7In: number | null = null;
+        let etAsOf: string | null = null;
+        let rain7In: number | null = null;
+        if (stress?.et_latest_date != null) {
+          try {
+            const series = await getEtSeries(
+              farmId,
+              isoAddDays(stress.et_latest_date, -6),
+              stress.et_latest_date,
+            );
+            if (series.results.length > 0) {
+              et7In =
+                series.results.reduce((sum, r) => sum + r.et_mm, 0) / 25.4;
+              etAsOf = series.as_of;
+            }
+          } catch {}
+        } else {
+          // Pending farms: show cached local rainfall in the hero instead.
+          try {
+            const weather = await getWeatherReadings(
+              farmId,
+              `${weekCutoff}T00:00:00Z`,
+            );
+            const rains = weather
+              .map((w) => w.rainfall_mm)
+              .filter((v): v is number => v != null);
+            if (rains.length > 0) {
+              rain7In = rains.reduce((sum, v) => sum + v, 0) / 25.4;
+            }
+          } catch {}
+        }
+
         if (active)
           setState({
             status: "ready",
@@ -105,9 +152,10 @@ function FarmDetailContent({ params }: { params: Promise<{ id: string }> }) {
             hasBaseline: baselines.length > 0,
             events,
             alerts,
-            weekCutoff: new Date(Date.now() - 6 * 86_400_000)
-              .toISOString()
-              .slice(0, 10),
+            weekCutoff,
+            et7In,
+            etAsOf,
+            rain7In,
           });
       } catch (err) {
         if (!active) return;
@@ -148,13 +196,24 @@ function FarmDetailContent({ params }: { params: Promise<{ id: string }> }) {
       </CenteredMessage>
     );
 
-  const { farm, stress, savings, hasBaseline, events, alerts, weekCutoff } =
-    state;
+  const {
+    farm,
+    stress,
+    savings,
+    hasBaseline,
+    events,
+    alerts,
+    weekCutoff,
+    et7In,
+    etAsOf,
+    rain7In,
+  } = state;
 
   // Gallons applied over the trailing 7 days, for the irrigation subtotal.
   const weekGallons = events
     .filter((e) => e.event_date >= weekCutoff)
     .reduce((sum, e) => sum + e.gallons_applied, 0);
+  const weekAcIn = gallonsToAcreInches(weekGallons);
   const visibleEvents = showAllEvents
     ? events
     : events.slice(0, EVENTS_PREVIEW_COUNT);
@@ -196,6 +255,7 @@ function FarmDetailContent({ params }: { params: Promise<{ id: string }> }) {
             ) : (
               <PendingAssessmentCard
                 farm={farm}
+                rain7In={rain7In}
                 onAddDetails={() => setEditOpen(true)}
               />
             )}
@@ -234,6 +294,17 @@ function FarmDetailContent({ params }: { params: Promise<{ id: string }> }) {
                   </button>
                 </div>
               )}
+              {et7In != null && etAsOf != null && (
+                <div className="mt-4 flex items-baseline justify-between rounded-lg bg-blue-50 px-3 py-2 text-sm">
+                  <span className="text-gray-600">{t("etReadout")}</span>
+                  <span className="font-semibold text-gray-900">
+                    {t("etValue", { inches: et7In.toFixed(2) })}{" "}
+                    <span className="text-xs font-normal text-gray-500">
+                      {t("etAsOf", { date: formatDate(etAsOf, locale) })}
+                    </span>
+                  </span>
+                </div>
+              )}
               <dl className="mt-4 grid grid-cols-3 gap-2">
                 <FieldFact
                   label={t("crop")}
@@ -245,7 +316,12 @@ function FarmDetailContent({ params }: { params: Promise<{ id: string }> }) {
                 />
                 <FieldFact
                   label={t("soil")}
-                  value={farm.soil_type ? soilLabel(farm.soil_type) : "—"}
+                  value={farm.soil_type ? tSoil(farm.soil_type) : "—"}
+                  sub={
+                    farm.soil_type
+                      ? t("holdsWater", { awc: AWC_IN_PER_FT[farm.soil_type] })
+                      : undefined
+                  }
                 />
               </dl>
             </section>
@@ -258,6 +334,8 @@ function FarmDetailContent({ params }: { params: Promise<{ id: string }> }) {
                 {weekGallons > 0 && (
                   <span className="rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700">
                     {t("thisWeek", { gallons: weekGallons.toLocaleString() })}
+                    {weekAcIn >= 0.01 &&
+                      ` · ${t("acInWeek", { acin: weekAcIn.toFixed(2) })}`}
                   </span>
                 )}
               </div>
@@ -339,11 +417,20 @@ function FarmDetailContent({ params }: { params: Promise<{ id: string }> }) {
   );
 }
 
-function FieldFact({ label, value }: { label: string; value: string }) {
+function FieldFact({
+  label,
+  value,
+  sub,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+}) {
   return (
     <div className="rounded-lg bg-gray-50 p-3">
       <dt className="text-xs text-gray-500">{label}</dt>
       <dd className="mt-0.5 text-sm font-semibold text-gray-900">{value}</dd>
+      {sub && <dd className="mt-0.5 text-xs text-gray-500">{sub}</dd>}
     </div>
   );
 }
