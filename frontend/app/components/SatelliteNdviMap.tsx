@@ -20,15 +20,18 @@ export default function SatelliteNdviMap({
   farmId,
   wkt,
   scans,
+  label,
 }: {
   farmId: number;
   wkt: string;
   scans: SatelliteScanSummary[];
+  label?: string;
 }) {
   const t = useTranslations("farmDetail");
   const locale = useLocale();
   const positions = parseWktPolygon(wkt);
   const [index, setIndex] = useState(0);
+  const [showNdvi, setShowNdvi] = useState(scans.length > 0);
   // Grids are fetched lazily per timeline position and cached; null marks a
   // failed fetch so we don't retry it on every render.
   const [details, setDetails] = useState<
@@ -69,7 +72,7 @@ export default function SatelliteNdviMap({
     return canvas.toDataURL("image/png");
   }, [detail]);
 
-  if (!positions || scan == null) return null;
+  if (!positions) return null;
 
   const polygonBounds = latLngBounds(positions);
   // Real scans carry the raster window's bounds; seeded grids are drawn over
@@ -82,19 +85,47 @@ export default function SatelliteNdviMap({
   return (
     <section className="rounded-2xl border border-gray-200 p-6">
       <div className="flex items-center justify-between gap-3">
-        <h3 className="text-base font-semibold">{t("ndviTitle")}</h3>
-        {scan.source === "seed" && (
-          <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700">
-            {t("ndviDemoBadge")}
+        <h2 className="text-lg font-semibold">{t("field")}</h2>
+        {label && (
+          <span className="rounded-md bg-black/70 px-2 py-1 text-xs font-medium text-white">
+            {label}
           </span>
         )}
       </div>
-      <p className="mt-1 text-sm text-gray-600">
-        {t("ndviAsOf", { date: formatDate(scan.scan_date, locale) })}
-      </p>
-      <p className="mt-1 text-xs text-gray-500">{t("ndviHelper")}</p>
+      {scans.length > 0 && (
+        <div className="mt-3 flex items-center justify-between gap-3 text-sm">
+          <p className="text-gray-600">
+            {scan
+              ? t("ndviAsOf", { date: formatDate(scan.scan_date, locale) })
+              : t("ndviUnavailable")}
+          </p>
+          <button
+            type="button"
+            onClick={() => setShowNdvi((v) => !v)}
+            className={`rounded-full px-3 py-1 text-xs font-medium ${
+              showNdvi
+                ? "bg-amber-50 text-amber-700"
+                : "bg-gray-100 text-gray-600"
+            }`}
+          >
+            {showNdvi ? t("ndviHide") : t("ndviShow")}
+          </button>
+        </div>
+      )}
+      {scans.length === 0 ? (
+        <p className="mt-2 text-sm text-gray-500">{t("ndviUnavailable")}</p>
+      ) : (
+        <div className="mt-1">
+          {scan?.source === "seed" && (
+            <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700">
+              {t("ndviDemoBadge")}
+            </span>
+          )}
+          <p className="mt-1 text-xs text-gray-500">{t("ndviHelper")}</p>
+        </div>
+      )}
 
-      <div className="relative isolate z-0 mt-4 h-72 overflow-hidden rounded-xl">
+      <div className="map-inset-controls relative isolate z-0 mt-4 h-72 overflow-hidden rounded-xl">
         <MapContainer
           bounds={polygonBounds.pad(0.2)}
           scrollWheelZoom={false}
@@ -102,21 +133,21 @@ export default function SatelliteNdviMap({
         >
           <TileLayer attribution={IMAGERY_ATTRIBUTION} url={IMAGERY_URL} />
           <TileLayer url={LABELS_URL} />
-          {overlayUrl && (
-            <ImageOverlay
-              url={overlayUrl}
-              bounds={overlayBounds}
-              opacity={0.72}
-            />
+          {showNdvi && overlayUrl && (
+            <ImageOverlay url={overlayUrl} bounds={overlayBounds} opacity={0.72} />
           )}
           <Polygon
             positions={positions}
-            pathOptions={{ color: "#ffffff", weight: 2, fillOpacity: 0 }}
+            pathOptions={{
+              color: showNdvi ? "#ffffff" : "#16a34a",
+              weight: showNdvi ? 2 : 3,
+              fillOpacity: showNdvi ? 0 : 0.15,
+            }}
           />
         </MapContainer>
       </div>
 
-      {scans.length > 1 && (
+      {scans.length > 1 && showNdvi && (
         <div className="mt-4">
           <label className="mb-1 block text-xs text-gray-600" htmlFor="ndvi-timeline">
             {t("ndviTimeline")}
@@ -133,17 +164,19 @@ export default function SatelliteNdviMap({
         </div>
       )}
 
-      <div className="mt-4 grid grid-cols-3 gap-2 text-xs">
-        <span className="rounded-md bg-green-600/80 px-2 py-1 text-white">
-          {t("ndviLegendHigh")}
-        </span>
-        <span className="rounded-md bg-amber-500/80 px-2 py-1 text-white">
-          {t("ndviLegendMid")}
-        </span>
-        <span className="rounded-md bg-amber-900/80 px-2 py-1 text-white">
-          {t("ndviLegendLow")}
-        </span>
-      </div>
+      {showNdvi && scans.length > 0 && (
+        <div className="mt-4 grid grid-cols-3 gap-2 text-xs">
+          <span className="rounded-md bg-green-600/80 px-2 py-1 text-white">
+            {t("ndviLegendHigh")}
+          </span>
+          <span className="rounded-md bg-amber-500/80 px-2 py-1 text-white">
+            {t("ndviLegendMid")}
+          </span>
+          <span className="rounded-md bg-amber-900/80 px-2 py-1 text-white">
+            {t("ndviLegendLow")}
+          </span>
+        </div>
+      )}
     </section>
   );
 }

@@ -28,7 +28,7 @@ export default function Navbar() {
         <Link href="/" className="flex items-center gap-1">
           <Logo />
           <span className="text-white text-lg font-semibold tracking-tight">
-            WaterStress
+            AquaAlert
           </span>
         </Link>
 

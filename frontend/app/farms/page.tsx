@@ -13,7 +13,6 @@ import {
 } from "../lib/api";
 import { displayName, formatDate } from "../lib/format";
 import EditFarmSheet from "../components/EditFarmSheet";
-import KebabMenu from "../components/KebabMenu";
 import CreateFarmSheet from "../components/CreateFarmSheet";
 import ProtectedRoute from "../components/ProtectedRoute";
 
@@ -38,6 +37,7 @@ function FarmsContent() {
   // farm planted yet" should match the data snapshot anyway.
   const [todayIso, setTodayIso] = useState("");
   const [creating, setCreating] = useState(false);
+  const [filter, setFilter] = useState<"all" | "attention">("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<Farm | null>(null);
@@ -105,6 +105,13 @@ function FarmsContent() {
     return severity === "yellow" || severity === "red";
   }).length;
   const stressLoaded = farms.every((f) => f.id in stressMap);
+  const visibleFarms =
+    filter === "attention"
+      ? farms.filter((f) => {
+          const severity = stressMap[f.id]?.severity;
+          return severity === "yellow" || severity === "red";
+        })
+      : farms;
 
   return (
     // pt-28 clears the fixed navbar (matches /impact)
@@ -125,20 +132,39 @@ function FarmsContent() {
       </div>
 
       <div className="mb-6 grid grid-cols-3 gap-4">
-        <SummaryStat label={t("statFarms")} value={String(farms.length)} />
+        <SummaryStat
+          label={t("statFarms")}
+          value={String(farms.length)}
+          onClick={() => setFilter("all")}
+          active={filter === "all"}
+        />
         <SummaryStat
           label={t("statAcres")}
           value={totalAcres > 0 ? totalAcres.toLocaleString() : "—"}
+          onClick={() => setFilter("all")}
+          active={filter === "all"}
         />
         <SummaryStat
           label={t("statAttention")}
           value={stressLoaded ? String(needsAttention) : "…"}
           accent={needsAttention > 0}
+          onClick={() => setFilter("attention")}
+          active={filter === "attention"}
+          disabled={!stressLoaded}
         />
       </div>
 
       <div className="hidden sm:block overflow-x-auto">
-        <table className="w-full text-sm border-collapse">
+        <table className="w-full table-fixed border-collapse text-sm">
+          <colgroup>
+            <col className="w-[24%]" />
+            <col className="w-[15%]" />
+            <col className="w-[14%]" />
+            <col className="w-[15%]" />
+            <col className="w-[10%]" />
+            <col className="w-[16%]" />
+            <col className="w-[18%]" />
+          </colgroup>
           <thead>
             <tr className="border-b border-gray-200 text-left text-gray-500">
               <th className="px-3 pb-3 font-medium">{t("colName")}</th>
@@ -146,16 +172,15 @@ function FarmsContent() {
               <th className="px-3 pb-3 font-medium">{t("colCrop")}</th>
               <th className="px-3 pb-3 font-medium">{t("colLocation")}</th>
               <th className="px-3 pb-3 font-medium text-right">{t("colAcres")}</th>
-              <th className="px-3 pb-3 font-medium">{t("colPlanted")}</th>
-              <th className="px-3 pb-3" aria-label={t("colStatus")} />
+              <th className="px-3 pb-3 font-medium">{t("colDate")}</th>
+              <th className="px-3 pb-3 text-right font-medium">{t("colActions")}</th>
             </tr>
           </thead>
           <tbody>
-            {farms.map((farm) => (
+            {visibleFarms.map((farm) => (
               <tr
                 key={farm.id}
-                onClick={() => router.push(`/farms/${farm.id}`)}
-                className="cursor-pointer border-b border-gray-200 hover:bg-gray-50"
+                className="border-b border-gray-200"
               >
                 <td className="px-3 py-3 font-medium text-gray-900">
                   {displayName(farm.name)}
@@ -178,29 +203,47 @@ function FarmsContent() {
                   {farm.acreage_acres?.toLocaleString() ?? "—"}
                 </td>
                 <td className="px-3 py-3 text-gray-600">
-                  {formatDate(farm.planting_date, locale)}
-                </td>
-                <td className="px-3 py-3 text-right">
-                  <KebabMenu
-                    ariaLabel={t("actionsFor", { name: farm.name })}
-                    items={[
-                      { label: t("edit"), onSelect: () => setEditing(farm) },
-                      {
-                        label: t("delete"),
-                        onSelect: () => handleDelete(farm),
-                        danger: true,
-                      },
-                    ]}
+                  <DateCell
+                    plantingDate={farm.planting_date}
+                    stress={stressMap[farm.id]}
+                    loaded={farm.id in stressMap}
+                    todayIso={todayIso}
+                    locale={locale}
                   />
+                </td>
+                <td className="px-3 py-3">
+                  <div className="flex items-center justify-end gap-2">
+                    <button
+                      onClick={() => router.push(`/farms/${farm.id}`)}
+                      className="rounded border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                    >
+                      {t("view")}
+                    </button>
+                    <button
+                      onClick={() => setEditing(farm)}
+                      className="rounded border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                    >
+                      {t("edit")}
+                    </button>
+                    <button
+                      onClick={() => handleDelete(farm)}
+                      className="rounded border border-red-200 px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+                    >
+                      {t("delete")}
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+        {visibleFarms.length === 0 && (
+          <p className="mt-4 text-sm text-gray-500">{t("noMatches")}</p>
+        )}
       </div>
 
       <div className="sm:hidden flex flex-col gap-4">
-        {farms.map((farm) => (
+        {visibleFarms.map((farm) => (
           <Link
             key={farm.id}
             href={`/farms/${farm.id}`}
@@ -225,10 +268,22 @@ function FarmsContent() {
               {farm.acreage_acres
                 ? t("acShort", { acres: farm.acreage_acres })
                 : t("areaUnknown")}{" "}
-              · {t("plantedMobile", { date: formatDate(farm.planting_date, locale) })}
+              ·{" "}
+              {farm.planting_date
+                ? farm.planting_date > todayIso
+                  ? t("plannedMobile", {
+                      date: formatDate(farm.planting_date, locale),
+                    })
+                  : t("plantedMobile", {
+                      date: formatDate(farm.planting_date, locale),
+                    })
+                : "—"}
             </div>
           </Link>
         ))}
+        {visibleFarms.length === 0 && (
+          <p className="text-sm text-gray-500">{t("noMatches")}</p>
+        )}
       </div>
 
       <CreateFarmSheet
@@ -253,13 +308,28 @@ function SummaryStat({
   label,
   value,
   accent = false,
+  active = false,
+  disabled = false,
+  onClick,
 }: {
   label: string;
   value: string;
   accent?: boolean;
+  active?: boolean;
+  disabled?: boolean;
+  onClick?: () => void;
 }) {
   return (
-    <div className="rounded-xl border border-gray-200 p-4">
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className={`w-full rounded-xl border p-4 text-left transition ${
+        active
+          ? "border-green-500 bg-green-50"
+          : "border-gray-200 hover:border-gray-300"
+      } disabled:cursor-not-allowed disabled:opacity-60`}
+    >
       <div className="text-sm text-gray-500">{label}</div>
       <div
         className={`mt-1 text-2xl font-bold tabular-nums ${
@@ -268,13 +338,13 @@ function SummaryStat({
       >
         {value}
       </div>
-    </div>
+    </button>
   );
 }
 
 const STATUS_STYLES = {
   green: { dot: "bg-green-500", labelKey: "statusHealthy" },
-  yellow: { dot: "bg-yellow-400", labelKey: "statusApproaching" },
+  yellow: { dot: "bg-amber-500", labelKey: "statusApproaching" },
   red: { dot: "bg-red-500", labelKey: "statusStressed" },
 } as const;
 
@@ -301,10 +371,12 @@ function StatusCell({
     // "pending" — it isn't planted yet.
     const planned = plantingDate != null && plantingDate > todayIso;
     return (
-      <span className="inline-flex items-center gap-2 text-gray-400">
+      <span className="inline-flex items-center gap-2 text-gray-700">
         <span
           aria-hidden
-          className={`h-2.5 w-2.5 rounded-full ${planned ? "bg-sky-300" : "bg-gray-300"}`}
+          className={`h-2.5 w-2.5 rounded-full ${
+            planned ? "bg-blue-600" : "bg-amber-500"
+          }`}
         />
         {planned ? t("statusPlanned") : t("statusPending")}
       </span>
@@ -322,6 +394,42 @@ function StatusCell({
         </span>
       )}
     </span>
+  );
+}
+
+function DateCell({
+  plantingDate,
+  stress,
+  loaded,
+  todayIso,
+  locale,
+}: {
+  plantingDate: string | null;
+  stress: WaterStress | null | undefined;
+  loaded: boolean;
+  todayIso: string;
+  locale: string;
+}) {
+  const t = useTranslations("farms");
+  if (!plantingDate) return "—";
+  if (!loaded) return formatDate(plantingDate, locale);
+
+  const planned = stress?.severity == null && plantingDate > todayIso;
+  const futureMismatch = plantingDate > todayIso && !planned;
+
+  return (
+    <div className="min-w-0">
+      <p className="truncate">
+        {planned
+          ? t("datePlanned", { date: formatDate(plantingDate, locale) })
+          : t("datePlanted", { date: formatDate(plantingDate, locale) })}
+      </p>
+      {futureMismatch && (
+        <p className="mt-0.5 text-xs text-amber-700">
+          {t("dateWarningFuture")}
+        </p>
+      )}
+    </div>
   );
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import type { Farm } from "../lib/api";
 
 type ChecklistItem = {
@@ -15,13 +15,17 @@ export default function PendingAssessmentCard({
   farm,
   onAddDetails,
   rain7In = null,
+  expectedAtIso = null,
 }: {
   farm: Farm;
   onAddDetails: () => void;
   /** Trailing-7-day rainfall in inches from cached weather; null = no data. */
   rain7In?: number | null;
+  /** Best estimate for first satellite reading arrival in ISO format. */
+  expectedAtIso?: string | null;
 }) {
   const t = useTranslations("pendingAssessment");
+  const locale = useLocale();
 
   const items: ChecklistItem[] = [
     { key: "boundary", done: farm.field_polygon != null },
@@ -31,6 +35,13 @@ export default function PendingAssessmentCard({
   ];
   const missing = items.filter((item) => !item.done);
   const setupComplete = missing.length === 0;
+  const expectedEta =
+    expectedAtIso == null
+      ? null
+      : new Intl.DateTimeFormat(locale, {
+          dateStyle: "long",
+          timeStyle: "short",
+        }).format(new Date(expectedAtIso));
 
   return (
     <section
@@ -47,7 +58,11 @@ export default function PendingAssessmentCard({
         </h2>
       </div>
       <p className="mt-2 text-sm text-gray-600">
-        {setupComplete ? t("waitingBody") : t("setupBody")}
+        {setupComplete
+          ? expectedEta
+            ? t("waitingBodyEta", { eta: expectedEta })
+            : t("waitingBody")
+          : t("setupBody")}
       </p>
 
       <ul className="mt-4 flex flex-col gap-2 text-sm">
@@ -68,11 +83,22 @@ export default function PendingAssessmentCard({
           </li>
         ))}
         <li className="flex items-center gap-2">
-          <span aria-hidden className="text-amber-500">
-            ◌
-          </span>
+          {setupComplete ? (
+            <span
+              aria-hidden
+              className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-amber-400 border-r-transparent"
+            />
+          ) : (
+            <span aria-hidden className="text-amber-500">
+              ◌
+            </span>
+          )}
           <span className="text-gray-500">
-            {setupComplete ? t("satellitePending") : t("satelliteBlocked")}
+            {setupComplete
+              ? expectedEta
+                ? t("satellitePendingEta", { eta: expectedEta })
+                : t("satellitePending")
+              : t("satelliteBlocked")}
           </span>
         </li>
       </ul>

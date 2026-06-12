@@ -36,11 +36,6 @@ import AlertsCard from "../../components/AlertsCard";
 import KebabMenu from "../../components/KebabMenu";
 import ProtectedRoute from "../../components/ProtectedRoute";
 
-// Leaflet requires `window`; load client-side only (see FieldMap.tsx).
-const FieldMap = dynamic(() => import("../../components/FieldMap"), {
-  ssr: false,
-  loading: () => <div className="h-64 animate-pulse rounded-xl bg-gray-100" />,
-});
 const SatelliteNdviMap = dynamic(
   () => import("../../components/SatelliteNdviMap"),
   {
@@ -50,6 +45,15 @@ const SatelliteNdviMap = dynamic(
 );
 
 const EVENTS_PREVIEW_COUNT = 5;
+
+function estimateNextSatelliteEta(now = new Date()): string {
+  const eta = new Date(now);
+  eta.setHours(20, 0, 0, 0);
+  if (eta <= now) {
+    eta.setDate(eta.getDate() + 1);
+  }
+  return eta.toISOString();
+}
 
 type LoadState =
   | { status: "loading" }
@@ -74,6 +78,7 @@ type LoadState =
       // Trailing-7-day rainfall in inches for the pending hero. Null = no
       // cached weather rows.
       rain7In: number | null;
+      expectedFirstReadingAt: string;
     };
 
 export default function FarmDetailPage({
@@ -177,6 +182,7 @@ function FarmDetailContent({ params }: { params: Promise<{ id: string }> }) {
             et7In,
             etAsOf,
             rain7In,
+            expectedFirstReadingAt: estimateNextSatelliteEta(),
           });
       } catch (err) {
         if (!active) return;
@@ -229,7 +235,9 @@ function FarmDetailContent({ params }: { params: Promise<{ id: string }> }) {
     et7In,
     etAsOf,
     rain7In,
+    expectedFirstReadingAt,
   } = state;
+  const hasAssessment = stress != null;
 
   // Gallons applied over the trailing 7 days, for the irrigation subtotal.
   const weekGallons = events
@@ -300,6 +308,7 @@ function FarmDetailContent({ params }: { params: Promise<{ id: string }> }) {
               <PendingAssessmentCard
                 farm={farm}
                 rain7In={rain7In}
+                expectedAtIso={expectedFirstReadingAt}
                 onAddDetails={() => setEditOpen(true)}
               />
             )}
@@ -312,22 +321,22 @@ function FarmDetailContent({ params }: { params: Promise<{ id: string }> }) {
           </div>
 
           <div className="flex flex-col gap-4 lg:col-span-2">
-            <section className="rounded-2xl border border-gray-200 p-6">
-              <h2 className="text-lg font-semibold">{t("field")}</h2>
-              {farm.field_polygon ? (
-                <div className="mt-4">
-                  <FieldMap
-                    wkt={farm.field_polygon}
-                    label={
-                      farm.acreage_acres != null
-                        ? t("acresChip", {
-                            acres: farm.acreage_acres.toLocaleString(),
-                          })
-                        : undefined
-                    }
-                  />
-                </div>
-              ) : (
+            {farm.field_polygon ? (
+              <SatelliteNdviMap
+                farmId={farm.id}
+                wkt={farm.field_polygon}
+                scans={hasAssessment ? scans : []}
+                label={
+                  farm.acreage_acres != null
+                    ? t("acresChip", {
+                        acres: farm.acreage_acres.toLocaleString(),
+                      })
+                    : undefined
+                }
+              />
+            ) : (
+              <section className="rounded-2xl border border-gray-200 p-6">
+                <h2 className="text-lg font-semibold">{t("field")}</h2>
                 <div className="mt-4 rounded-xl bg-gray-50 p-4 text-sm text-gray-600">
                   <p>{t("noBoundary")}</p>
                   <button
@@ -337,16 +346,10 @@ function FarmDetailContent({ params }: { params: Promise<{ id: string }> }) {
                     {t("drawBoundary")}
                   </button>
                 </div>
-              )}
-              {farm.field_polygon && scans.length > 0 && (
-                <div className="mt-4">
-                  <SatelliteNdviMap
-                    farmId={farm.id}
-                    wkt={farm.field_polygon}
-                    scans={scans}
-                  />
-                </div>
-              )}
+              </section>
+            )}
+
+            <section className="rounded-2xl border border-gray-200 p-6">
               {et7In != null && etAsOf != null && (
                 <div className="mt-4 flex items-baseline justify-between rounded-lg bg-blue-50 px-3 py-2 text-sm">
                   <span className="text-gray-600">{t("etReadout")}</span>
@@ -358,7 +361,7 @@ function FarmDetailContent({ params }: { params: Promise<{ id: string }> }) {
                   </span>
                 </div>
               )}
-              <dl className="mt-4 grid grid-cols-3 gap-2">
+              <dl className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <FieldFact
                   label={t("crop")}
                   value={farm.crop_type ? displayName(farm.crop_type) : "—"}
@@ -384,20 +387,42 @@ function FarmDetailContent({ params }: { params: Promise<{ id: string }> }) {
                 <h2 className="text-lg font-semibold">
                   {t("irrigationHistory")}
                 </h2>
-                {weekGallons > 0 && (
-                  <span className="rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700">
-                    {t("thisWeek", { gallons: weekGallons.toLocaleString() })}
-                    {weekAcIn >= 0.01 &&
-                      ` · ${t("acInWeek", { acin: weekAcIn.toFixed(2) })}`}
-                  </span>
-                )}
+                <div className="flex items-center gap-2">
+                  {weekGallons > 0 && hasAssessment && (
+                    <span className="rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700">
+                      {t("thisWeek", { gallons: weekGallons.toLocaleString() })}
+                      {weekAcIn >= 0.01 &&
+                        ` · ${t("acInWeek", { acin: weekAcIn.toFixed(2) })}`}
+                    </span>
+                  )}
+                  <button
+                    onClick={() => setLogOpen(true)}
+                    className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    {t("logIrrigation")}
+                  </button>
+                  {hasAssessment && events.length > EVENTS_PREVIEW_COUNT && (
+                    <button
+                      onClick={() => setShowAllEvents((v) => !v)}
+                      className="text-sm font-medium text-green-700 hover:underline"
+                    >
+                      {showAllEvents
+                        ? t("showLess")
+                        : t("viewAll", { count: events.length })}
+                    </button>
+                  )}
+                </div>
               </div>
               {eventActionError && (
                 <p role="alert" className="mt-2 text-sm text-red-600">
                   {eventActionError}
                 </p>
               )}
-              {events.length === 0 ? (
+              {!hasAssessment ? (
+                <p className="mt-3 text-sm text-gray-500">
+                  {t("irrigationPendingAssessment")}
+                </p>
+              ) : events.length === 0 ? (
                 <div className="mt-2 text-sm text-gray-500">
                   <p>{t("noIrrigations")}</p>
                   <button
@@ -424,12 +449,17 @@ function FarmDetailContent({ params }: { params: Promise<{ id: string }> }) {
                               {t("estimated")}
                             </span>
                           )}
-                          {event.hours_run != null && event.pump_gpm != null && (
+                          {event.hours_run != null && event.pump_gpm != null ? (
                             <span className="text-xs text-gray-500">
-                              {t("runtimeValue", {
+                              {t("runtimeValueWithMinutes", {
                                 hours: event.hours_run.toLocaleString(),
+                                minutes: Math.round(event.hours_run * 60).toLocaleString(),
                                 gpm: event.pump_gpm.toLocaleString(),
                               })}
+                            </span>
+                          ) : (
+                            <span className="rounded bg-blue-50 px-2 py-0.5 text-xs text-blue-700">
+                              {t("manualEntry")}
                             </span>
                           )}
                           <span className="font-medium">
@@ -457,16 +487,6 @@ function FarmDetailContent({ params }: { params: Promise<{ id: string }> }) {
                       </li>
                     ))}
                   </ul>
-                  {events.length > EVENTS_PREVIEW_COUNT && (
-                    <button
-                      onClick={() => setShowAllEvents((v) => !v)}
-                      className="mt-3 text-sm font-medium text-green-700 hover:underline"
-                    >
-                      {showAllEvents
-                        ? t("showLess")
-                        : t("viewAll", { count: events.length })}
-                    </button>
-                  )}
                 </>
               )}
             </section>
@@ -510,10 +530,10 @@ function FieldFact({
   sub?: string;
 }) {
   return (
-    <div className="rounded-lg bg-gray-50 p-3">
+    <div className="min-w-0 rounded-lg bg-gray-50 p-3">
       <dt className="text-xs text-gray-500">{label}</dt>
       <dd className="mt-0.5 text-sm font-semibold text-gray-900">{value}</dd>
-      {sub && <dd className="mt-0.5 text-xs text-gray-500">{sub}</dd>}
+      {sub && <dd className="mt-0.5 text-xs text-gray-500 break-words">{sub}</dd>}
     </div>
   );
 }
