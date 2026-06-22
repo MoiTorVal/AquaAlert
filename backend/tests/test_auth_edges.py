@@ -327,6 +327,26 @@ def test_patch_me_unauthenticated(unauthed_client):
     assert response.status_code == 401
 
 
+def test_auth_write_rejects_untrusted_origin(unauthed_client):
+    response = unauthed_client.post(
+        "/auth/login",
+        json={"email": "nobody@example.com", "password": "wrongpass"},
+        headers={"Origin": "https://evil.example"},
+    )
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Untrusted request origin"
+
+
+def test_patch_me_rejects_untrusted_origin(client):
+    response = client.patch(
+        "/auth/me",
+        json={"locale": "es"},
+        headers={"Origin": "https://evil.example"},
+    )
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Untrusted request origin"
+
+
 # ── password length limits ───────────────────────────────────────────────────
 
 

@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { updateMe, type Alert, type StressSeverity } from "../lib/api";
+import {
+  updateMe,
+  type Alert,
+  type SatelliteScanSummary,
+  type StressSeverity,
+} from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { formatDate } from "../lib/format";
 
@@ -15,7 +20,13 @@ const SEVERITY_DOT: Record<StressSeverity, string> = {
 /** Alert history for one farm plus the account-wide SMS opt-in. The toggle
  * lives here (not a settings page) because alerts are the thing being
  * toggled — a farmer should find both in one place. */
-export default function AlertsCard({ alerts }: { alerts: Alert[] }) {
+export default function AlertsCard({
+  alerts,
+  scans = [],
+}: {
+  alerts: Alert[];
+  scans?: SatelliteScanSummary[];
+}) {
   const t = useTranslations("alerts");
   const locale = useLocale();
   const { user, setUser } = useAuth();
@@ -25,6 +36,8 @@ export default function AlertsCard({ alerts }: { alerts: Alert[] }) {
   const [error, setError] = useState<string | null>(null);
 
   const smsEnabled = user?.sms_alerts_enabled ?? false;
+
+  const scansDesc = [...scans].sort((a, b) => b.scan_date.localeCompare(a.scan_date));
 
   const toggleSms = async () => {
     if (!user || saving) return;
@@ -119,43 +132,89 @@ export default function AlertsCard({ alerts }: { alerts: Alert[] }) {
         <p className="mt-2 text-sm text-gray-500">{t("empty")}</p>
       ) : (
         <ul className="mt-2 divide-y divide-gray-100 text-sm">
-          {alerts.map((alert) => (
-            <li key={alert.id} className="flex items-center justify-between py-2">
-              <span className="flex items-center gap-2">
-                <span
-                  aria-hidden
-                  className={`h-2.5 w-2.5 rounded-full ${SEVERITY_DOT[alert.severity]}`}
-                />
-                <span className="text-gray-700">
-                  {alert.severity === "red"
-                    ? t("redAlert")
-                    : alert.days_to_stress != null
-                      ? t("yellowAlertDays", { days: alert.days_to_stress })
-                      : t("yellowAlert")}
-                </span>
-              </span>
-              <span className="flex items-center gap-2">
-                {alert.feedback != null && (
-                  <span
-                    className={`rounded px-2 py-0.5 text-xs ${
-                      alert.feedback === "yes"
-                        ? "bg-red-50 text-red-700"
-                        : "bg-gray-100 text-gray-500"
-                    }`}
-                  >
-                    {alert.feedback === "yes"
-                      ? t("feedbackYes")
-                      : t("feedbackNo")}
+          {alerts.map((alert) => {
+            const ndviEvidence = getNdviEvidence(alert, scansDesc);
+            return (
+              <li key={alert.id} className="flex items-center justify-between py-2">
+                <span className="flex flex-col gap-0.5">
+                  <span className="flex items-center gap-2">
+                    <span
+                      aria-hidden
+                      className={`h-2.5 w-2.5 rounded-full ${SEVERITY_DOT[alert.severity]}`}
+                    />
+                    <span className="text-gray-700">
+                      {alert.severity === "red"
+                        ? t("redAlert")
+                        : alert.days_to_stress != null
+                          ? t("yellowAlertDays", { days: alert.days_to_stress })
+                          : t("yellowAlert")}
+                    </span>
                   </span>
-                )}
-                <span className="text-gray-500">
-                  {formatDate(alert.as_of_date, locale)}
+                  {ndviEvidence != null && (
+                    <span
+                      className={`text-xs ${
+                        ndviEvidence.kind === "confirms"
+                          ? "text-green-700"
+                          : ndviEvidence.kind === "mixed"
+                            ? "text-amber-700"
+                            : "text-gray-500"
+                      }`}
+                    >
+                      {ndviEvidence.kind === "confirms"
+                        ? t("ndviConfirms", {
+                            date: formatDate(ndviEvidence.scanDate, locale),
+                          })
+                        : ndviEvidence.kind === "mixed"
+                          ? t("ndviMixed", {
+                              date: formatDate(ndviEvidence.scanDate, locale),
+                            })
+                          : t("ndviNoSignal", {
+                              date: formatDate(ndviEvidence.scanDate, locale),
+                            })}
+                    </span>
+                  )}
                 </span>
-              </span>
-            </li>
-          ))}
+                <span className="flex items-center gap-2">
+                  {alert.feedback != null && (
+                    <span
+                      className={`rounded px-2 py-0.5 text-xs ${
+                        alert.feedback === "yes"
+                          ? "bg-red-50 text-red-700"
+                          : "bg-gray-100 text-gray-500"
+                      }`}
+                    >
+                      {alert.feedback === "yes"
+                        ? t("feedbackYes")
+                        : t("feedbackNo")}
+                    </span>
+                  )}
+                  <span className="text-gray-500">
+                    {formatDate(alert.as_of_date, locale)}
+                  </span>
+                </span>
+              </li>
+            );
+          })}
         </ul>
       )}
     </section>
   );
+}
+
+function getNdviEvidence(
+  alert: Alert,
+  scans: SatelliteScanSummary[],
+): { kind: "confirms" | "mixed" | "noSignal"; scanDate: string } | null {
+  const scan = scans.find((s) => s.scan_date <= alert.as_of_date && s.mean_ndvi != null);
+  if (scan == null || scan.mean_ndvi == null) return null;
+
+  if (alert.severity === "red") {
+    if (scan.mean_ndvi < 0.35) return { kind: "confirms", scanDate: scan.scan_date };
+    if (scan.mean_ndvi <= 0.6) return { kind: "mixed", scanDate: scan.scan_date };
+    return { kind: "noSignal", scanDate: scan.scan_date };
+  }
+
+  return scan.mean_ndvi <= 0.6
+    ? { kind: "confirms", scanDate: scan.scan_date }
+    : { kind: "noSignal", scanDate: scan.scan_date };
 }

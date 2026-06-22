@@ -313,7 +313,7 @@ function FarmDetailContent({ params }: { params: Promise<{ id: string }> }) {
               />
             )}
 
-            <AlertsCard alerts={alerts} />
+            <AlertsCard alerts={alerts} scans={hasAssessment ? scans : []} />
 
             <Link href={`/farms/${farmId}/savings`} className="block">
               <SavingsCard rows={savings} />

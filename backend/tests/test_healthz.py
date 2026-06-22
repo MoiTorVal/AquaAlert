@@ -14,6 +14,9 @@ def test_healthz_ok(unauthed_client):
     response = unauthed_client.get("/healthz")
     assert response.status_code == 200
     assert response.json() == {"status": "ok", "database": "up"}
+    assert response.headers["x-content-type-options"] == "nosniff"
+    assert response.headers["x-frame-options"] == "DENY"
+    assert response.headers["referrer-policy"] == "no-referrer"
 
 
 def test_healthz_db_down(unauthed_client):

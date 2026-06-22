@@ -5,7 +5,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import en from "../../messages/en.json";
 import AlertsCard from "./AlertsCard";
 import { AuthContext } from "../context/AuthContext";
-import { updateMe, type Alert, type User } from "../lib/api";
+import {
+  updateMe,
+  type Alert,
+  type SatelliteScanSummary,
+  type User,
+} from "../lib/api";
 
 vi.mock("../lib/api", () => ({
   updateMe: vi.fn(),
@@ -37,11 +42,28 @@ const alert = {
   feedback_at: "2026-06-08T15:00:00Z",
 } satisfies Alert;
 
-function renderCard(user: User, alerts: Alert[], setUser = vi.fn()) {
+const confirmingScan = {
+  id: 2,
+  farm_id: 5,
+  scan_date: "2026-06-07",
+  cloud_cover_pct: 3,
+  mean_ndvi: 0.31,
+  max_ndvi: 0.72,
+  min_ndvi: 0.11,
+  source: "seed",
+  created_at: "2026-06-07T01:00:00Z",
+} satisfies SatelliteScanSummary;
+
+function renderCard(
+  user: User,
+  alerts: Alert[],
+  scans: SatelliteScanSummary[] = [],
+  setUser = vi.fn(),
+) {
   render(
     <NextIntlClientProvider locale="en" messages={en} timeZone="America/Los_Angeles">
       <AuthContext.Provider value={{ user, setUser, isLoading: false }}>
-        <AlertsCard alerts={alerts} />
+        <AlertsCard alerts={alerts} scans={scans} />
       </AuthContext.Provider>
     </NextIntlClientProvider>,
   );
@@ -54,10 +76,16 @@ describe("AlertsCard", () => {
   });
 
   it("renders alert history with severity and feedback", () => {
-    renderCard(baseUser, [alert]);
+    renderCard(baseUser, [alert], [confirmingScan]);
     expect(screen.getByText(/Approaching stress — 3 days left/)).toBeInTheDocument();
+    expect(screen.getByText(/NDVI also shows stress/i)).toBeInTheDocument();
     expect(screen.getByText("Confirmed in field")).toBeInTheDocument();
     expect(screen.getByText("Jun 8, 2026")).toBeInTheDocument();
+  });
+
+  it("shows NDVI mismatch text when scan looks healthy", () => {
+    renderCard(baseUser, [alert], [{ ...confirmingScan, mean_ndvi: 0.74 }]);
+    expect(screen.getByText(/NDVI looked healthy/i)).toBeInTheDocument();
   });
 
   it("shows the empty state without alerts", () => {

@@ -31,7 +31,7 @@ def get_current_user(access_token: str | None = Cookie(default=None), db: Sessio
     
     try:
         user_id = int(user_id_str)
-    except ValueError:
+    except (ValueError, TypeError):
         raise credentials_exception
     
     user = db.query(models.User).filter(models.User.id == user_id).first()

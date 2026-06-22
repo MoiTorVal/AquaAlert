@@ -10,7 +10,7 @@ ALGORITHM = "HS256"
 # refresh_tokens table is the revocable session record. A leaked access
 # token is only good for this window.
 ACCESS_TOKEN_EXPIRE_MINUTES = 15
-REFRESH_TOKEN_EXPIRE_DAYS = 14
+REFRESH_TOKEN_EXPIRE_DAYS = 1
 
 class TokenExpiredError(Exception):
     pass

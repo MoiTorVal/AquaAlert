@@ -142,6 +142,9 @@
     "redAlert": "Water stress",
     "yellowAlert": "Approaching stress",
     "yellowAlertDays": "Approaching stress — {days, plural, one {# day} other {# days}} left",
+    "ndviConfirms": "NDVI also shows stress (as of {date})",
+    "ndviMixed": "NDVI shows mixed stress signals (as of {date})",
+    "ndviNoSignal": "NDVI looked healthy in the latest scan (as of {date})",
     "feedbackYes": "Confirmed in field",
     "feedbackNo": "Looked fine"
   },

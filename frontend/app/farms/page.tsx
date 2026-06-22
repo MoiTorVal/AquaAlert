@@ -183,7 +183,12 @@ function FarmsContent() {
                 className="border-b border-gray-200"
               >
                 <td className="px-3 py-3 font-medium text-gray-900">
-                  {displayName(farm.name)}
+                  <Link
+                    href={`/farms/${farm.id}`}
+                    className="hover:text-green-700 hover:underline"
+                  >
+                    {displayName(farm.name)}
+                  </Link>
                 </td>
                 <td className="px-3 py-3">
                   <StatusCell

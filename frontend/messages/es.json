@@ -142,6 +142,9 @@
     "redAlert": "Estrés hídrico",
     "yellowAlert": "Acercándose al estrés",
     "yellowAlertDays": "Acercándose al estrés — {days, plural, one {queda # día} other {quedan # días}}",
+    "ndviConfirms": "NDVI también muestra estrés (al {date})",
+    "ndviMixed": "NDVI muestra señales mixtas de estrés (al {date})",
+    "ndviNoSignal": "NDVI se veía saludable en el escaneo más reciente (al {date})",
     "feedbackYes": "Confirmado en campo",
     "feedbackNo": "Se veía bien"
   },

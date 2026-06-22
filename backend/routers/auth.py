@@ -32,6 +32,17 @@ import hashlib
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
+def _enforce_trusted_origin(request: Request) -> None:
+    """Block cross-site browser writes when Origin is present and untrusted."""
+    origin = request.headers.get("origin")
+    if origin is None:
+        return
+    if origin not in settings.allowed_origins:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Untrusted request origin",
+        )
+
 
 def _set_auth_cookie(response: JSONResponse, token: str):
     response.set_cookie(
@@ -88,6 +99,7 @@ def _start_session(db: Session, response: JSONResponse, user_id: int) -> JSONRes
 @router.post("/signup", status_code=status.HTTP_201_CREATED)
 @limiter.limit(AUTH_WRITE_LIMIT)
 def signup(request: Request, body: SignupRequest, db: Session = Depends(get_db)):
+    _enforce_trusted_origin(request)
     existing = db.query(models.User).filter(models.User.email == body.email).first()
     if existing:
         raise HTTPException(
@@ -121,6 +133,7 @@ def signup(request: Request, body: SignupRequest, db: Session = Depends(get_db))
 @router.post("/login", status_code=status.HTTP_200_OK)
 @limiter.limit(AUTH_WRITE_LIMIT)
 def login(request: Request, body: LoginRequest, db: Session = Depends(get_db)):
+    _enforce_trusted_origin(request)
     user = db.query(models.User).filter(models.User.email == body.email).first()
     if not user or not verify_password(body.password, user.hashed_password):
         raise HTTPException(
@@ -137,6 +150,7 @@ def login(request: Request, body: LoginRequest, db: Session = Depends(get_db)):
 @router.post("/forgot-password", status_code=status.HTTP_200_OK)
 @limiter.limit(AUTH_WRITE_LIMIT)
 def forgot_password(request: Request, body: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    _enforce_trusted_origin(request)
     user = db.query(models.User).filter(models.User.email == body.email).first()
     if user:
         db.query(models.PasswordResetToken).filter(
@@ -163,6 +177,7 @@ def forgot_password(request: Request, body: ForgotPasswordRequest, db: Session =
 @router.post("/reset-password", status_code=status.HTTP_200_OK)
 @limiter.limit(AUTH_WRITE_LIMIT)
 def reset_password(request: Request, body: ResetPasswordRequest, db: Session = Depends(get_db)):
+    _enforce_trusted_origin(request)
     reset_token = db.query(models.PasswordResetToken).filter(
         models.PasswordResetToken.token == hash_token(body.token)
     ).first()
@@ -188,9 +203,11 @@ def reset_password(request: Request, body: ResetPasswordRequest, db: Session = D
 
 @router.post("/refresh", status_code=status.HTTP_200_OK)
 def refresh(
+    request: Request,
     refresh_token: str | None = Cookie(default=None),
     db: Session = Depends(get_db),
 ):
+    _enforce_trusted_origin(request)
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Invalid or expired refresh token",
@@ -224,9 +241,11 @@ def refresh(
 
 @router.post("/logout", status_code=status.HTTP_200_OK)
 def logout(
+    request: Request,
     refresh_token: str | None = Cookie(default=None),
     db: Session = Depends(get_db),
 ):
+    _enforce_trusted_origin(request)
     if refresh_token is not None:
         db.query(models.RefreshToken).filter(
             models.RefreshToken.token_hash == hash_token(refresh_token),
@@ -244,10 +263,12 @@ def get_me(current_user: models.User = Depends(get_current_user)):
 
 @router.patch("/me", response_model=UserResponse)
 def update_me(
+    request: Request,
     body: UserUpdateRequest,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
+    _enforce_trusted_origin(request)
     # exclude_unset so omitted fields stay untouched while an explicit null
     # clears an equity answer (voluntary self-ID, must be revocable)
     for key, value in body.model_dump(exclude_unset=True).items():
