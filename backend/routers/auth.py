@@ -50,7 +50,7 @@ def _set_auth_cookie(response: JSONResponse, token: str):
         value=token,
         httponly=True,
         secure=settings.secure_cookie,
-        samesite="lax",
+        samesite=settings.cookie_samesite,
         # Match the JWT lifetime so the cookie can't outlive the token.
         max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
     )
@@ -65,7 +65,7 @@ def _set_refresh_cookie(response: JSONResponse, token: str):
         value=token,
         httponly=True,
         secure=settings.secure_cookie,
-        samesite="lax",
+        samesite=settings.cookie_samesite,
         # Only auth endpoints ever need this cookie — scoping the path keeps
         # it off every other request.
         path="/auth",
@@ -253,8 +253,8 @@ def logout(
         ).update({"revoked_at": datetime.now(timezone.utc)})
         db.commit()
     response = JSONResponse(content={"message": "Logged out"}, status_code=status.HTTP_200_OK)
-    response.delete_cookie(key="access_token", httponly=True, secure=settings.secure_cookie, samesite="lax")
-    response.delete_cookie(key="refresh_token", path="/auth", httponly=True, secure=settings.secure_cookie, samesite="lax")
+    response.delete_cookie(key="access_token", httponly=True, secure=settings.secure_cookie, samesite=settings.cookie_samesite)
+    response.delete_cookie(key="refresh_token", path="/auth", httponly=True, secure=settings.secure_cookie, samesite=settings.cookie_samesite)
     return response
 
 @router.get("/me", response_model=UserResponse)

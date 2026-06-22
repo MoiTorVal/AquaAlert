@@ -6,13 +6,11 @@ from backend.config import settings
 
 load_dotenv()
 
-DB_USER = settings.db_user
-DB_PASSWORD = settings.db_password.get_secret_value()
-DB_HOST = settings.db_host
-DB_PORT = settings.db_port
-DB_NAME = settings.db_name
-
-DATABASE_URL = f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+# Single source of truth for the connection string: settings.sqlalchemy_url
+# prefers DATABASE_URL (managed hosts) and otherwise builds it from the
+# discrete DB_* vars. Kept module-level because alembic/env.py and the test
+# suite both import this name.
+DATABASE_URL = settings.sqlalchemy_url
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
