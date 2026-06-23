@@ -4,7 +4,7 @@
 ![Python 3.13](https://img.shields.io/badge/python-3.13-blue)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 
-**[Live demo →](https://aquaalert.vercel.app)** &nbsp;·&nbsp; [API docs](https://aquaalert-backend.up.railway.app/docs)
+**[Live demo →](https://aqua-alert-pearl.vercel.app)** &nbsp;·&nbsp; [API docs](https://aquaalert-production.up.railway.app/docs)
 
 AquaAlert warns small farm operators when a field is approaching water stress, and tracks the water, energy, and CO₂ they save for grant and SGMA reporting. It is **alert-based, not an irrigation scheduler**: every field gets a green / yellow / red severity plus a "days to stress" estimate so a grower without an agronomist can see what needs attention today.
 

@@ -2,11 +2,14 @@
 builder = "nixpacks"
 
 [deploy]
-# Runs before the process starts — applies any pending Alembic migrations.
-# Railway rolls back the deploy if this exits non-zero.
-releaseCommand = "alembic upgrade head"
-# Single worker: APScheduler has no cross-process lock.
-# N workers = N duplicate ET pulls and N duplicate SMS sends per alert.
-startCommand = "uvicorn backend.main:app --host 0.0.0.0 --port $PORT --workers 1"
+# Migrate, then boot. Railway does not reliably run a separate release /
+# pre-deploy phase, so the migration is chained into the start command instead.
+# `alembic upgrade head` is idempotent (a no-op when already at head); if it
+# fails, uvicorn never starts and the deploy is marked unhealthy rather than
+# serving against a stale schema.
+# Single worker: APScheduler has no cross-process lock, and one worker also
+# guarantees a single migration run — N workers = N duplicate ET pulls, N
+# duplicate SMS sends per alert, and N concurrent migrations.
+startCommand = "alembic upgrade head && uvicorn backend.main:app --host 0.0.0.0 --port $PORT --workers 1"
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 3
