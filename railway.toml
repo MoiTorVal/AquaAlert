@@ -1,0 +1,12 @@
+[build]
+builder = "nixpacks"
+
+[deploy]
+# Runs before the process starts — applies any pending Alembic migrations.
+# Railway rolls back the deploy if this exits non-zero.
+releaseCommand = "alembic upgrade head"
+# Single worker: APScheduler has no cross-process lock.
+# N workers = N duplicate ET pulls and N duplicate SMS sends per alert.
+startCommand = "uvicorn backend.main:app --host 0.0.0.0 --port $PORT --workers 1"
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
