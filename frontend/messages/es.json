@@ -50,7 +50,13 @@
     "datePlanned": "Planeado {date}",
     "dateWarningFuture": "Revise fecha/estado",
     "noMatches": "Ningún rancho coincide con este filtro.",
-    "acShort": "{acres} ac"
+    "acShort": "{acres} ac",
+    "viewMap": "Mapa",
+    "viewList": "Lista",
+    "viewToggleLabel": "Cambiar entre vista de mapa y lista",
+    "mapAsOf": "Al {date}",
+    "mapEmpty": "Aún no hay linderos dibujados. Abra un rancho y dibuje su lindero para verlo en el mapa.",
+    "mapUnmapped": "{count, plural, one {# rancho no tiene lindero dibujado y no aparece en el mapa.} other {# ranchos no tienen lindero dibujado y no aparecen en el mapa.}}"
   },
   "farmDetail": {
     "back": "← Mis ranchos",
