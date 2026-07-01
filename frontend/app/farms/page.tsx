@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import {
@@ -11,10 +12,19 @@ import {
   type Farm,
   type WaterStress,
 } from "../lib/api";
+import { buildFarmMapEntries, latestAsOf } from "../lib/farmMap";
 import { displayName, formatDate } from "../lib/format";
 import EditFarmSheet from "../components/EditFarmSheet";
 import CreateFarmSheet from "../components/CreateFarmSheet";
 import ProtectedRoute from "../components/ProtectedRoute";
+
+// Leaflet touches `window` at import time — client-only load.
+const FarmsMap = dynamic(() => import("../components/FarmsMap"), {
+  ssr: false,
+  loading: () => (
+    <div className="h-[28rem] animate-pulse rounded-xl bg-gray-100" />
+  ),
+});
 
 export default function FarmsPage() {
   return (
@@ -38,6 +48,9 @@ function FarmsContent() {
   const [todayIso, setTodayIso] = useState("");
   const [creating, setCreating] = useState(false);
   const [filter, setFilter] = useState<"all" | "attention">("all");
+  // Starts as "list"; flips to "map" once farms load if any has a drawn
+  // boundary (a map with nothing on it is a worse landing than the table).
+  const [view, setView] = useState<"map" | "list">("list");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<Farm | null>(null);
@@ -49,6 +62,7 @@ function FarmsContent() {
       .then((loaded) => {
         if (!active) return;
         setFarms(loaded);
+        if (loaded.some((f) => f.field_polygon)) setView("map");
         setTodayIso(new Date().toISOString().slice(0, 10));
         setLoading(false);
         // Stress loads per farm after the list renders; a farm whose
@@ -112,6 +126,9 @@ function FarmsContent() {
           return severity === "yellow" || severity === "red";
         })
       : farms;
+  const mapEntries = buildFarmMapEntries(visibleFarms, stressMap);
+  const mapAsOf = latestAsOf(mapEntries, stressMap);
+  const unmappedCount = visibleFarms.length - mapEntries.length;
 
   return (
     // pt-28 clears the fixed navbar (matches /impact)
@@ -123,12 +140,15 @@ function FarmsContent() {
       )}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">{t("title")}</h1>
-        <button
-          onClick={() => setCreating(true)}
-          className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700"
-        >
-          {t("addFarm")}
-        </button>
+        <div className="flex items-center gap-3">
+          <ViewToggle view={view} onChange={setView} />
+          <button
+            onClick={() => setCreating(true)}
+            className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700"
+          >
+            {t("addFarm")}
+          </button>
+        </div>
       </div>
 
       <div className="mb-6 grid grid-cols-3 gap-4">
@@ -154,7 +174,27 @@ function FarmsContent() {
         />
       </div>
 
-      <div className="hidden sm:block overflow-x-auto">
+      {view === "map" &&
+        (visibleFarms.length === 0 ? (
+          // Filter can empty the map entirely — that's "no matches", not
+          // "no boundaries drawn".
+          <p className="text-sm text-gray-500">{t("noMatches")}</p>
+        ) : (
+          <div>
+            <FarmsMap
+              entries={mapEntries}
+              asOf={mapAsOf}
+              onSelect={(farmId) => router.push(`/farms/${farmId}`)}
+            />
+            {unmappedCount > 0 && (
+              <p className="mt-2 text-sm text-gray-500">
+                {t("mapUnmapped", { count: unmappedCount })}
+              </p>
+            )}
+          </div>
+        ))}
+
+      <div className={view === "map" ? "hidden" : "hidden sm:block overflow-x-auto"}>
         <table className="w-full table-fixed border-collapse text-sm">
           <colgroup>
             <col className="w-[24%]" />
@@ -247,7 +287,7 @@ function FarmsContent() {
         )}
       </div>
 
-      <div className="sm:hidden flex flex-col gap-4">
+      <div className={view === "map" ? "hidden" : "sm:hidden flex flex-col gap-4"}>
         {visibleFarms.map((farm) => (
           <Link
             key={farm.id}
@@ -306,6 +346,43 @@ function FarmsContent() {
         />
       )}
     </main>
+  );
+}
+
+function ViewToggle({
+  view,
+  onChange,
+}: {
+  view: "map" | "list";
+  onChange: (view: "map" | "list") => void;
+}) {
+  const t = useTranslations("farms");
+  const options = [
+    { value: "map", label: t("viewMap") },
+    { value: "list", label: t("viewList") },
+  ] as const;
+  return (
+    <div
+      role="group"
+      aria-label={t("viewToggleLabel")}
+      className="inline-flex rounded-lg border border-gray-300 p-0.5"
+    >
+      {options.map(({ value, label }) => (
+        <button
+          key={value}
+          type="button"
+          aria-pressed={view === value}
+          onClick={() => onChange(value)}
+          className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
+            view === value
+              ? "bg-green-600 text-white"
+              : "text-gray-600 hover:bg-gray-50"
+          }`}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
   );
 }
 

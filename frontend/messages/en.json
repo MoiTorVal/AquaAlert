@@ -50,7 +50,13 @@
     "datePlanned": "Planned {date}",
     "dateWarningFuture": "Check date/status mismatch",
     "noMatches": "No farms match this filter.",
-    "acShort": "{acres} ac"
+    "acShort": "{acres} ac",
+    "viewMap": "Map",
+    "viewList": "List",
+    "viewToggleLabel": "Switch between map and list view",
+    "mapAsOf": "As of {date}",
+    "mapEmpty": "No field boundaries drawn yet. Open a farm and draw its boundary to see it on the map.",
+    "mapUnmapped": "{count, plural, one {# farm has no boundary drawn and isn't shown on the map.} other {# farms have no boundary drawn and aren't shown on the map.}}"
   },
   "farmDetail": {
     "back": "← My Farms",
